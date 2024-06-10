@@ -1,0 +1,328 @@
+---
+title: "Armonización mapas de bosque/no-bosque GLAD-SMBYC"
+author:
+- "Jerónimo Rodríguez-Escobar^[Temple University, jeronimo.rodriguez@temple.edu]"
+- "Víctor Hugo Gutiérrez-Vélez^[Temple University]"
+- "Wilson Lara-Henao^[Temple University]"
+date: "`r Sys.Date()`"
+output:
+  word_document: default
+  toc: true
+  number_sections: true
+  fig_caption: true
+  extra_dependencies: float
+  pdf_document: null
+bibliography: /Users/sputnik/Documents/biomas_iavh/Forest_homologation/Documentation/ref_harm.bib
+subtitle: Memoria y Documento Técnico
+affiliation: Temple University
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE, results='hide'}
+Packages <- c("terra","sf", "ecochange", "tidyverse",
+              "diffeR", "useful","data.table", "pander", "knitr")
+lapply(Packages, library, character.only = TRUE)
+# gdalUtils::gdal_setInstallation()
+# valid_install <- !is.null(getOption("gdalUtils_gdalPath"))
+setwd <- 'xxxxxx' # esto lo tengo que resover. 
+```
+# Objetivo General
+
+Este documento presenta los aspectos básicos del procedimiento para armonizar los mapas anuales de pérdida de bosque *High-Resolution Global Maps of 21st-Century Forest Cover Change* producido por el Grupo de Análisis y Descubriento (*GLAD*) de la Universidad de Maryland con los mapas de bosque/no bosque producidos por el *Sistema de Monitoreo de Bosques y Carbono (SMBYC)* del IDEAM (Instituto de Estudios Ambientales y Metereológicos de Colombia). El objetivo es generar una serie de mapas de cobertura de bosque a partir del año 2000 anual sin pérdida de datos y  compatible con los mapas de bosque de SMBYC, que son utlilizados en Colombia para tareas como el monitoreo y reporte  de pérdida de bosque y como insumo para la formulación y seguimiento de políticas de gestión ambiental. 
+
+## Objetivos Específicos
+
+- Desarrollar y aplicar una metodología que permita identificar los umbrales de cobertura de dosel de los mapas de pérdida de bosque de GLAD que resultan en el mayor nivel de coincidencia con los datos de SMBYC para unidades espaciales relativamente homogéneas.
+
+-  A partir de los umbrales obtenidos, generar  mapas anuales de cobertura de bosque con cubrimiento nacional armonizados y sin pérdidas de datos desde el año 2000 y el año más reciente para el cual los datos de GLAD estén disponibles.  
+
+# Materiales
+
+## Producto Pérdida Cobertura Bosques-GLAD
+
+Este producto es generado a partir del procesamiento de datos multiespectrales obtenidos por las misiones Landsat 5 TM, 7 ETM+ y 8 OLI con cubrimiento global, con excepción de las regiones polares. Se compone de dos componentes principales; un mapa de cobertura boscosa para el año 2000 y mapas anuales de pérdida de bosque, incorporando nuevos una vez están disponibles. La densidad del dosel a nivel de pixel está representada sobre una escala continua entre 0 y 100 [@hansen_2013]; [**\textcolor{blue} {GLAD}**](http://earthenginepartners.appspot.com/google.com/science-2013-global-forest). Dada la definición de cobertura de bosque adoptada, este producto sólo registra pérdida con respecto a la cobertura detectada en el año 2000 y por lo tanto no incluye pixeles con la clase "ganancia de bosque". Adicionalmente, considera únicamente valores de reflectancia y no hace distinción entre bosques naturales, plantaciones forestales y de palma de aceite, entre otros. Los datos están disponibles para descarga gratuitamente, de manera manual o mediante rutinas programáticas como *ecochange*.
+
+## Mapas de Bosque/no Bosque - Sistema de Monitoreo de Bosques y Carbono (SMBYC), IDEAM
+
+Mapas de cobertura de bosque/no-bosque para Colombia generados mediante el procesamiento de imágenes de Landsat por el [**\textcolor{blue}{IDEAM}**](http://www.ideam.gov.co/en/capas-geo), disponibles para años
+1990, 2000, 2005, 2010, 2015, 2016, 2017, 2018 y 2019. Los métodos utilizados se describen en la [**\textcolor{blue}{memoria técnica}**](http://www.ideam.gov.co/web/ecosistemas/deforestacion-colombia?p_p_id=110_INSTANCE_fhJ48ZHw3QxH&p_p_lifecycle=0&p_p_state=normal&p_p_mode=view&p_p_col_id=column-2&p_p_col_count=1&_110_INSTANCE_fhJ48ZHw3QxH_struts_action=%2Fdocument_library_display%2Fview_file_entry&_110_INSTANCE_fhJ48ZHw3QxH_redirect=http%3A%2F%2Fwww.ideam.gov.co%2Fweb%2Fecosistemas%2Fdeforestacion-colombia%3Fp_p_id%3D110_INSTANCE_fhJ48ZHw3QxH%26p_p_lifecycle%3D0%26p_p_state%3Dnormal%26p_p_mode%3Dview%26p_p_col_id%3Dcolumn-2%26p_p_col_count%3D1&_110_INSTANCE_fhJ48ZHw3QxH_fileEntryId=1185640) [@galindo_memoria_2014] e incluyen calibración, coregistro, clasificación e interpretación visual. Según la definición del SMBYC, un pixel es clasificado como "bosque" a partir de una cobertura de dosel del 30% y excluye plantaciones forestales y cultivos de palma de aceite.
+
+## GLAD-SMBYC
+
+La tabla 1 presenta una comparación de las características de los datos de GLAAD y los del SMBYC
+
+
+```{r table-simple, echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
+panderOptions('table.split.table', Inf)
+set.caption("Comparison GLAD-SMBYC")
+my.data <- "
+                | SMBYC           | GLAD
+  Resolución Espacial | 30m | 30m 
+   Información de Base     | Landsat      |   Landsat
+   Cubrimiento |Nacional | Global
+   Frecuencia |Irregular | Anual
+  Años | 1990, 2000, 2005, 2010, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019 |  2000:2020
+  Ventajas | Distingue entre bosques plantados y naturales| Mayor Resolución temporal
+           | Información oficial utilizada para medir y reportar coberturas boscosas en Colombia| Menor pérdida de información
+           | |Actualización anual
+           | | Múltiples umbrales de dosel disponibles
+Desventajas| Mapas producidos a intervalos irregulares | No hace distinción entre bosques plantados y naturales
+           | Múltiples fuentes de pérdidas de datos (SLC-off y nubosidad)| No reporta ganancia de bosque"
+df <- read.delim(textConnection(my.data),header=FALSE,sep="|",strip.white=TRUE,stringsAsFactors=FALSE)
+names(df) <- unname(as.list(df[1,])) 
+df <- df[-1,] 
+row.names(df)<-NULL
+pander(df, style = 'rmarkdown')
+```
+
+```{r table-simple eng, echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
+panderOptions('table.split.table', Inf)
+set.caption("Comparison GLAD-SMBYC")
+y.data <- "
+                | SMBYC           | GLC
+Spatial Resolution | 30m | 30m 
+Base Information     | Landsat      |   Landsat
+Coverage |National | Global
+Frequency |Irregular | Annual
+Years | 1990, 2000, 2005, 2010, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019 |  2000:2020
+Strenghts | Distinguishes between planted and natural forests| Higher temporal resolution
+           | Official information used to measure and report forest cover in Colombia| Less data loss
+           | |Annual updates
+           | | Canoy Cover represented as % level
+Weaknesses| Maps are roduced at irregular intervals | Does not distinguish between planted and natural forests
+           | Multiple sources of data loss (SLC-off and cloudiness)| Does not report forest gain"
+df <- read.delim(textConnection(my.data),header=FALSE,sep="|",strip.white=TRUE,stringsAsFactors=FALSE)
+names(df) <- unname(as.list(df[1,])) 
+df <- df[-1,] 
+row.names(df)<-NULL
+pander(df, style = 'rmarkdown')
+```
+
+## Biomas Instituto Alexander von Humboldt 
+ 
+La alta biodiversidad de Colombia es el resultado de las interacciones de comunidades bióticas bajo condiciones  biofísicas y geográficas específicas que producen diferentes dinámicas ecológicas. Las unidades espaciales utilizadas para el análisis; llamdas biomas, fueron producidas por el [**\textcolor{blue}{Instituto de Investigación de Recursos Biológicos Alexander von Humboldt}**](www.humbodlt.org) como parte del componente biótico en la generacón del *Mapa de Ecosistemas Continentales, Marinos y Costeros de Colombia. Escala 1:100,000*. Utilizando medidas de diversidad \(\beta\) y combinado  zonificaciones regionales basadas en factores hidroclimáticos, hidrográfioas y orográficos [@londono]. Siguiendo esta definición, el territorio continental de Colombia se divide en 397 biomas, con superficies entre 5,42 ha (Halobioma Nechí-San Lucas) y 5.360.373,25 ha (Zonobioma Humedo Tropical Huitoto-Cahuinarí. 
+
+# Métodos 
+El procedimiento fue implementado en el lenguaje computacional de acceso abierto *R* [@R-base] y aplica funcionalidades del paquete *ecochange* [@Lara] desarrollado en el laboratorio [**\textcolor{blue}{RSensus}**](http://www.rsensus.org/en/) del Departamento de Geografía y Estudios Urbanos de Temple University y de los paquetes *terra/raster* [@Hijmans], *rgdal* [@Bivand], *gdalUtils* [@Greenberg],*sf* [@Pebesma], *tidyverse* [@Wickman], *furrr* [@Vaughan], *diffeR* [@Pontius] y *greenbrown* [@Forkel]. 
+
+## Preparación de los datos.
+
+Obtención de máscaras binarias de bosque/no bosque para todo el país utilizando umbrales de dosel entre el 30% y el 100% para dos años difernetes utlizando la función *ecochange::echanges()*. En este caso los años seleccionados fueron 2010 y 2017. 
+- Dado que el área mapeada por GLAD es mayor que la del SMBYC, generamos una máscara de máxima extensión de bosque combinando los mapas de bosque producidos entre 1990 y 2017. Esta mascara se la aplicamos a los mapas de GLAD para limitar el análisis a los pixeles que en algún momento fueron clasificados como bosque por IDEAM.
+- Los mapas de SMBYC fueron reclasificados y coregistrados para  respecto a los de GLAD, asegurando  correcto alineamiento y equivalencia de clases.
+
+```{r extmap, eval=FALSE, fig.align='left', fig.cap=, include=FALSE, out.width="40%"}
+knitr::include_graphics(here::here("/Users/sputnik/OneDrive - Temple University/Research Forests/whymask.jpeg"))
+```
+
+## División de los mapas por biomas
+
+Con las mapas de bosque de GLAD enmascarados y los del SMBYC debidamente homologados y alineados, utilizamos los polígonos de los biomas para dividirlos en múltiples rásters individuales. Para cada año produjimos 379 rásters con 22 bandas (GLAD) y 379 rásters de una sola banda para SMBYC.
+*Nota: para 20 biomas los mapas del SMBYC no registraron pixeles de bosque y fueron excluidos del análisis*. 
+
+## Generación de mapas de cambio bitemporales
+Para cada bioma, obtuvimos 23 mapas bitemporales de cambio; uno por cada umbral de GLAD y el de SMBYC utilizando la función *greenbrown::compareRaster()*, obteniendo cuatro clases que representan los posibles casos: Persistencia de bosque, persistencia de no bosque, pérdida de bosque y ganancia de bosque.
+
+## Análisis de coincidencia.
+
+Aplicando la función diffeR::crostabm() y usando los mapas de cambio de SMBYC como referencia, calculamos  matrices de contingencia para cada uno de los umbrales. Una matriz de contingencia es una tabla  de *n x n* celdas, donde n es le número de clases presentes. La informacion contenida en estas matrices permite calcular  la direrencia entree ambos conjuntos de datos utilizando múltiples métricas, incluyendo el nivel agregado de coincidencia (*agreement*),  errores de omisón, comisión y el tipo de transición [@pontius_2014] para cada una de las clases (persistencia de bosque, persistencia de no bosque y pérdida de bosque).
+
+### Ejemplo de matriz de contingencia para un bioma y un umbral.
+
+```{r eval=FALSE, warning=FALSE, include=FALSE}
+panderOptions('table.split.table', Inf)
+set.caption("Matriz de Contingencia, XXX")
+require(knitr)
+require(kableExtra)
+load('/Users/sputnik/Documents/biomas_iavh/final_march/ag_id_ha_85.RData')
+dift <- diff_mat_85[[30]]
+dift <- as.data.frame(dift)
+print(dift)
+# df <- read.delim(dift,header=FALSE,strip.white=TRUE,stringsAsFactors=FALSE)
+# names(df) <- unname(as.list(df[1,])) # put headers on
+# df <- df[-1,] # remove first row
+# row.names(df)<-NULL
+# pander(df, style = 'rmarkdown')
+ #kbl(dift) 
+#dift %>% kbl() %>% kable_styling()
+  #kable_paper(bootstrap_options = "striped", full_width = F)    # knitr::kable(dift, format='markdown', digits = getOption("digits"), row.names = c("Pers no bosque", "Pérdida de Bosque", "Ganancia de Bosque", "Persistencia de Bosque"), col.names = NA, align, caption = NULL, label = NULL, format.args = list(), escape = TRUE, ...)
+# no he podido resolver esta mondá 
+```
+
+A partir de esta matriz, es posible calcular  las diferentes métricas de coincidiencia entre los mapas, aplicando la función *diffeR::diffTablej()*.
+
+```{r matcont, eval=FALSE, warning=FALSE, include=FALSE}
+#require(knitr)
+#require(kableExtra)
+load('/Users/sputnik/Documents/biomas_iavh/final_march/ag_id_ha_85.RData')
+dift <- diffTablej(diff_mat_85[[30]])
+dift <- as.data.frame(dift)
+dift
+```
+
+## Procesamiento y consolidación de datos
+Una vez obtenidas las matrices para cada uno de los biomas y umbrales analizados (8338 matrices en total), procesamos y consolidamos los resultados en una sóla tabla que incluye el nivel de coincidencia entre los pares de mapas a nivel de clase y agregada para cada umbral, el nommbre del bioma, el tamaño del bioma (en número de pixeles) y la proporción de cada uno con respecto al área total del pais como factor de ponderación, siguendo las recomendaciones de buenas prácticas para estimar la presición para el análisis de cambios de coberturas [@olofsson_2014].  Adicionalmente, es posibles producir  salidas gráficas con los resultados de la evaluación a nivel de bioma. 
+La tabla presenta los resultados consolidados de la optimización identificando el umbral y el nivel de agreement entre los maps. Las columnas incluyen el nivel de precisión (*accuracy*), la métrica extraída (*type*), en este caso OA, el nombre del bioma, el umbral (*threshold*), el número de pixeles del bioma. 
+
+```{r eval=FALSE, warning=FALSE, include=FALSE}
+#require(dplyr)
+load('/Users/sputnik/Documents/biomas_iavh/Final_results_Codename_Abril/accuracy_masked_all.RData')
+print(accu_msk%>%group_by(biome)%>%filter(type=='OA')%>%slice(which.max(accuracy)), n=20)
+# require(knitr)
+# require(kable)
+# knittr::(accu_msk, 'latex')# n=10)
+```
+
+La figura 2 ilustra el comportamiento de los métricas de diferencias extraidas para los diferentes umbrales, para una selección de seis biomas diferentes.
+
+```{r grpahs, fig.align = 'left', out.width = "100%", fig.cap = "Coincidencia y Errores para diferentes Umbrales"}
+knitr::include_graphics(here::here("/Users/sputnik/OneDrive - Temple University/Documentacion_Armonizacion/Graphs3.jpg"))
+```
+
+```{r flow, fig.align = 'left', out.width = "100%", fig.cap = "Flujo de Trabajo Cálculo de Umbrales de Armonización"}
+knitr::include_graphics(here::here("/Users/sputnik/OneDrive - Temple University/Documentacion_Armonizacion/flujo.jpg"))
+```
+
+``` {r plot, echo=FALSE, eval= FALSE, include=TRUE, fig.align = 'center', out.width = "40%", fig.cap = "I am a genius 2"}
+load('/Users/sputnik/Documents/biomas_iavh/Final_results_Codename_Abril/accuracy_masked_all.RData')  
+namesv <- unique(accu_msk$biome)
+  where=namesv[13]
+  where <- as.character(where)
+  ggplot(accu_msk%>%group_by(class)%>%group_by(type)%>%filter(biome == where), aes(x=threshold, y=accuracy,color=interaction(class, type)))+
+    geom_line(position = position_dodge(preserve = 'single', width=), size=1) +
+    ylim(0, 1)+
+    ggtitle(where)
+namesv <- unique(accu_msk$biome)
+  where=namesv[10]
+  where <- as.character(where)
+  ggplot(accu_msk%>%group_by(class)%>%group_by(type)%>%filter(biome == where), aes(x=threshold, y=accuracy,color=interaction(class, type)))+
+    geom_line(position = position_dodge(preserve = 'single'),size=1) +
+    ylim(0, 1)+
+    ggtitle(where)  
+```
+
+### Generación de mapas de cobertura anuales armonizados 
+Incluimos los valores de umbral que retornan el máximo nivel de coincidencia como un  atributo adicional en el archivo vector (shape) con los biomas. Utilizamos dicho parámetro para obtener mapas armonizados para cada año iniciando en el 2000. A continuación, alienamos y ensamblamos los mapas individuales para obtener los  mapas de cubrimiento nacional, y como último paso, aplicamos la máscara de máxima extensión de SMBYC. 
+Los mapas obtenidos combinan las cualidades de GLAD y SMBYC:
+
+1. Las brechas de los mapas de SMBYC han sido llenadas. 
+3. Excluye bosques no naturales.
+
+La figura 4 presenta un acercamiento el mapa de bosque/no bosque del SMBYC para 2017; panel superior izquierdo. Se observan  tanto las áres de bosque como los lugares sin información. En el panel superior derecho están los resultados de la armonización antes de aplicar la máscara de máxima extensión, mientras que en el panel inferior izquierdo la máscara ya ha sido aplicada. 
+
+```{r ext, fig.align = 'left', out.width = "80%", fig.cap = "Resultados de la Armonización para el año 2017. Detalle"}
+knitr::include_graphics(here::here("/Users/sputnik/OneDrive - Temple University/Documentacion_Armonizacion/results_armonization.jpg"))
+```
+
+
+```{r mapd, fig.align = 'left', out.width = "80%", fig.cap = "Nivel de Ajuste y Umbrales óptimos"}
+knitr::include_graphics(here::here("/Users/sputnik/OneDrive - Temple University/Documentacion_Armonizacion/mapasarmo.jpg"))
+```
+El panel izquierdo de la la figura 5 muestra el nivel de coincidencia entre los mapas de GLAD y los de SMBYC para los diferentes biomas, mientras que el panel derecho presenta los umbrales que generan dicho nivel de coincidencia.  
+
+# Anexo: obtención de los mapas armonizados
+
+A continuación se presentan los pasos para descargar, alinear y ensamblar mapas anuales armonizados a partir de los datos de GLAD.
+
+## Cargar paquetes y preparar el ambiente de trabajo
+
+```{r, echo=TRUE, eval= FALSE, include=TRUE, results='hide', warning=FALSE, message=FALSE}
+Packages <- c("terra", "rgdal", "gdalUtils", "ecochange", "tidyverse",
+              "furrr")
+lapply(Packages, library, character.only = TRUE)
+gdalUtils::gdal_setInstallation()
+valid_install <- !is.null(getOption("gdalUtils_gdalPath"))
+```
+
+## Cargar los polígonos con los biomas.
+
+```{r, echo=TRUE, eval=FALSE, include=TRUE}
+biome <- readOGR('.', 'biomes_attributes_msk.shp')
+```
+
+## Generar vector con nombres para etiquetar los rasters
+```{r names, echo=TRUE, eval=FALSE, include=TRUE}
+names <- as.list(biome$BIOMA_IAvH)
+names <- map(1:length(names), function(x) as.character(names[[x]]))
+names <- unlist(names)
+```
+
+## Obtener los rasters de GLAD para los años 2019 y 2020
+```{r obtenerdatos, echo=TRUE, eval= FALSE, include=TRUE}
+suppressWarnings(
+  def1 <- echanges(biome,
+                  lyrs = c('treecover2000','lossyear'),      # nombres de las capas
+                  path = getwd(),    
+                  eco_range = c(biome$thrshld,100),      # Umbral de treecover2000
+                  change_vals = seq(19,20,1),
+                  binary_output = TRUE, # TRUE: produce máscaras binarias
+                  mc.cores = 10)     # número de núcleos, solo funciona en sistema linux
+)
+```
+
+## Exportar los mapas obtenidos
+```{r save, echo=TRUE, eval= FALSE, include=TRUE}
+map(1:length(maskedt), function(x) writeRaster(def1[[x]], 
+            paste('glad', names[x], sep='_'), format='GTiff', overwrite=TRUE))
+```
+
+## Alinear los biomas individuales y ensamblar
+```{r align, echo=TRUE, eval= FALSE, include=TRUE}
+packs <- c('terra','rgdal','parallel', 'R.utils', 'rvest','xml2','httr','getPass',
+           'gdalUtils','gdalUtilities','rgeos','rlang', 'rasterDT')
+sapply(packs, require, character.only = TRUE)
+# definir ruta a la carpeta donde están guardados los rasters generados
+dir. <- "/path/to/your/working/folder"
+tmp <- dir(dir.)
+tmp1 <- file.path(dir.,tmp)
+#crear carpeta temporal para almacenar los rasters alineados
+dir.create("/path/to/your/working/folder/outs")
+dir("path/to/your/working/folder/Align")
+#Raster de referencia para la alineación
+reference. <-"~/mask_ideam90_17.tif"
+tmp2 <- file.path('/path/to/your/working/folder/outs',tmp)
+malr <- Map(function(x,y)
+    align_rasters(
+        unaligned=x,
+    reference=reference.,
+    dstfile=y,
+    nThreads=8,
+    verbose=TRUE),
+    tmp1,tmp2)
+setwd('path/to/your/working/folder/Align')
+path.  <- '/path/to/your/working/folder/outs'
+toimp <- dir(path.)[grepl('.tif',dir(path.))]
+nwp <- file.path(path., toimp)
+dst <- file.path('path/to/your/working/foldern/merged.tif')
+## set any crs (sólo es necesario si se va a reproyectar a un crs diferente):
+cr.  <- "+proj=tmerc +lat_0=4.596200416666666 +lon_0=-74.07750791666666 +k=1 
+      +x_0=1000000 +y_0=1000000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"  
+mr <- gdalUtils::mosaic_rasters(
+                     gdalfile=nwp,
+                     dst_dataset=dst,
+                     output_Raster = TRUE,
+                     #gdalwarp_params = list(t_srs = cr.),
+                     verbose = TRUE)
+
+#Cerrar Brechas entre biomas:
+
+mr <- merge(borders, mr)
+
+# Aplicar máscara de máxima extensión:
+
+mr <- mask(mr, msk)
+writeRaster(mr, 'assembled', format='GTiff', overwrite=TRUE)
+```
+
+# Anexos
+- Biomas IAVH con valores del umbral optimizado
+- Máscara de Máxima Extensión de bosque en formato geotiff
+- Raster con límites entre biomas
+- Archivo .RData con los resultados de los análisis consolidados. 
+- Archivos auxiliares rmarkdown
+- Referencias
+
+# Referencias
