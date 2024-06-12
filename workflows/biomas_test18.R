@@ -1,17 +1,6 @@
 
                                         # This code is used to download all the forest- no forest binary masks from the 
 # Global forest cover Dataset by Hansen et al  using the package ForestChange.
-#It  returns maps for each one of the thresholds between 70 and 100%. The next step is to load this, stack cut it by pieces and then carry out the comparson betwee nthe maps. Everything trough maps. Another next step is to update this heading, the code does much more than that.
-
-#It requires the package "greenbrown" available here:
-
- #   http://greenbrown.r-forge.r-project.org
-# Load libraries 
-#rm(list=ls())
-
-getwd()
-unixtools::set.tempdir('/media/mnt/Ecosistemas_Colombia/tempfiledir')
-inpath <- getwd()
 
 
 setwd("/media/mnt/Ecosistemas_Colombia/hansen_ideam")
@@ -36,8 +25,6 @@ tempdir=paste(getwd(),'tempfiledir', sep="/")
 rasterOptions(tmpdir=tempdir)
 
 
-tempdir()
-tmpDir()
 # First part: Download forest maps from Hansen:
 # load study area  polygon 
 #############################################################
@@ -433,6 +420,6 @@ writeRaster(ag_95, 'hansen_col_1017_95', format='GTiff', overwrite=TRUE)
     listr14 <-list.files(".", "ag_hansen_2010_17_100")
     ag_100 <- list()
 for(i in 1:length(listr1)){
-    ag_100[[i]] <- raster(listr14)
+    ag_100[[i]] <- raster(listr14)}
 ag_100 <- do.call(ag_100, merge)
 #######################################################################

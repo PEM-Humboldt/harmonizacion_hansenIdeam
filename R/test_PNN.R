@@ -1,10 +1,9 @@
-<<<<<<< HEAD
+
 packs <- c('raster','rgdal', 'tidyverse', 'fasterize', 'landscapemetrics', 'sf','gdalUtils','gdalUtilities', 'rgeos', 'rasterDT', 'ecochange', 'furrr')
 out.. <-  sapply(packs, require, character.only = TRUE)
 
 
 setwd('/storage/home/TU/tug76452/Forest_Armonization')
-
 
 dir.create('tempfiledir')
                                         #obtain string with the path
@@ -14,7 +13,6 @@ rasterOptions(tmpdir=tempdir)
 #  Load 0 background raster   to rasterize
 temp <- raster('/storage/home/TU/tug76452/Forest_Armonization/bin_masked/msk_0.tif')#load harmonized masked 
 mskwd <- '/storage/share/BiomapCol_22/Maps_hansen/Armonized_msk'
-=======
 #Run comparison between SINAP forest maps and Harmonizerd
 #setwd('/storage/home/TU/tug76452/Forest_Armonization')
 #lab
@@ -93,14 +91,14 @@ sfs <- map(sfs, . %>% split(.$NOMBRE))
 #load harmonized masked. Cargar Mapas Harmonizados
 
                                         #load rasters mask 
->>>>>>> ff7dbf6fb3c7419f751e38d238f7af104fa63ae1
+
 
  
 #Load Years to analyize 
 setwd('/Users/sputnik/Documents/bosque-nobosque/rasters_SINAP')
 tiffes <- list.files('.', pattern='bin_masked') 
 #select the specific years
-<<<<<<< HEAD
+AD
 
 tiffes <- tiffes[-c(1:6)]
 tiffes <- tiffes[c(3,8,13,16,18,19)]

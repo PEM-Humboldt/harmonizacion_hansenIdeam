@@ -15,7 +15,6 @@ library(purrr)
 library(furrr)
 library(diffeR)
 library(useful)
-#library(greenbrown)
 library(data.table)
 
 
@@ -35,7 +34,7 @@ mun <- as(mun, 'Spatial')
 biomat <- mun%>%split(.$BIOMA_IAvH)
 
 #######################################################################################################
-#Chreate vector withthe names 
+#Chreate vector with the names 
 names <- as.list(mun$BIOMA_IAvH)
 names <- map(1:length(names), function(x) as.character(names[[x]]))
 namesu <- unlist(names)

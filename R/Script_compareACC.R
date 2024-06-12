@@ -1,5 +1,5 @@
 #July 18 2022
-#This can be improved by manipulatinb the table after rbinding, not before!!!! Way easier 
+#This can be improved by manipulating the table after rbinding, not before!!!! Way easier 
 rm(list=ls())
 load('/Users/sputnik/Documents/biomas_iavh/selected_areas/accut_f.RData')
 

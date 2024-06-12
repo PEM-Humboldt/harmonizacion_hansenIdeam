@@ -1,5 +1,4 @@
 library(tidyverse)
-rm(list=ls())
 
 load('/Users/sputnik/Documents/bosque-nobosque/areas_fin.RData')
 
