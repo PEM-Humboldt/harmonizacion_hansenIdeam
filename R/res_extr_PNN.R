@@ -124,6 +124,5 @@ dev.off()
 
 # # GGplot from here 
 aggp%>%filter(pnn=='Serrania_de Chiribiquete')
-x <- 5773972+82755
 aggp
 

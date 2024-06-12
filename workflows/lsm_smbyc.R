@@ -7,6 +7,7 @@ library(raster)
 library(tidyverse)
 library(landscapemetrics)
 library(furrr)
+library(scales)
 
 setwd('/storage/home/TU/tug76452/Forest_Armonization/bin_masked/outs') 
 
@@ -104,7 +105,7 @@ load('/Users/sputnik/Documents/bosque-nobosque/areas_fin.RData')
 areas_f%>%group_by(year, src) 
 
 areas_f <- as_tibble(areas_f)
-areas_f%>%group_by(year,src)%>%summarise(a_sum=sum(count)require(scales)
+areas_f%>%group_by(year,src)%>%summarise(a_sum=sum(count))
 
 areas_f <- areas_f%>%mutate(area_ha = count*0.09)
 areas_f <- areas_f%>%drop_na(value)
