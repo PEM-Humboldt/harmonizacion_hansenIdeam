@@ -1,0 +1,647 @@
+---
+title: "Harmonization Reloaded"
+author: "Jerónimo Rodríguez Escobar"
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+---
+
+Rebuild of the forest-harmonization workflow as a notebook. Update methods, review data and outputs, and compare with the SMBYC deforestation maps.
+
+## 1. Input Data
+
+Set path to the working folder 
+
+```{r, eval=FALSE}
+dir <- '/Users/sputnik/Library/CloudStorage/OneDrive-TempleUniversity/Research_Sommer_2023/harmonization_23/'
+packs <- c('terra', 'forcats', "diffeR", "dplyr", "sf", "stringr", "purrr", "tidyterra", 'parallel','enmSdmX') 
+sapply(packs, require, character.only = TRUE) 
+```
+a.  New forest change map; FC_smbyc2
+b.  Old Forest change maps (the one I used the first time, derived directly from the SMBYC forest-no forest maps); FC_smbyc1
+c.  GLC maps for multiple canopy thresholds (22 maps)
+
+
+The original downloaded forest masks for 2010 and 2017 are stored in this location in NIMBUS: /Volumes/tug76452/Forest_Armonization/Ecosistemas_Colombia/hansen_ideam/*cum*.  They filenames include the string "cum". Not my brightest moment, but anyway.
+
+### 2. Prepare new forest change map ("Angela's map")
+
+```{r, eval=FALSE}
+#Angela
+library(terra)
+FC_smbyc2 <- rast(paste0(dir, 'data_Angela/','ForChange2010_17_rc.tif')) #Angela
+# Old forest change map
+FC_smbyc1 <- rast(paste0(dir, 'data_Angela/','change10_17IDEam.tif')) # Old forest change map
+# SMBYC Max Ext. Mask
+#hansen90 <- rast('/Users/sputnik/Library/CloudStorage/OneDrive-TempleUniversity/Research Forests/Raster_inputs/mask_ideam90_17.tif')
+# Reclassify Angela's map to homolgue classes
+#FC_smbyc2 <- subst(FC_smbyc2, from= c(0,1,2,3,4,5), to=c(NA,4,2,NA,3,1))
+```
+
+## 2. Compare both forest loss maps 
+Explore the level of agreement between the original 2010-2017 forest change and Angela's forest change map. The tables here show the square contingency matrix between both forest cover maps and the difference metrics at the category level following Pontius and Santacruz (2014)
+```{r, eval=TRUE, echo=FALSE}
+library(diffeR)
+library(kableExtra)
+#comp <- crosstabm(FC_smbyc1,FC_smbyc2)
+comp <- read.csv('/Users/sputnik/Library/CloudStorage/OneDrive-TempleUniversity/Research_Sommer_2023/harmonization_23/comp.csv')
+comp <- as.data.frame(comp)
+total_pixels <- sum(comp)
+
+comp2 <- (comp/total_pixels) * 100 #obtains the table but in percentage, faster that recalculating the freaking 
+#thing
+comp2$X0 <- NULL
+comp2$X <- NULL
+comp2 <- comp2[-1,]
+#print(comp)
+rownames(comp2) <- c("no-Forest permanence", "Forest loss", "Forest Gain", "Forest permanence")
+colnames(comp2) <- c("no-Forest permanence", "Forest loss", "Forest Gain", "Forest permanence")
+kable(comp2, format = "html", digits = 5) %>%
+  kable_styling()
+#difft <- diffTablej(comp)
+comp2 <- as.matrix(comp2)
+
+difft2 <-diffTablej(comp2)
+print(difft2)
+```
+
+## 3. Prepare GLC Forest Masks 
+
+Mask planted forests from the GLC forests maps using 2012 amd 2018 Corine Land Cover maps, and convert them into binary (1/0) forest/no-forest masks
+
+```{r, eval=FALSE}
+tiffes <- list.files(dir, '2010_cum')
+han <- lapply(tiffes, function(t){
+  s <- rast(paste0(dir, t))
+  return(s)
+  })
+#Apply the masks and save maps 
+han <- mapply(function(ds1,ds2){
+  map <- mask(ds1, clc_12, filename=paste0(dir, 'ms_', ds2))},han,tiffes)
+
+tiffes <- list.files(dir, '2017_cum')
+han <- lapply(tiffes, function(t){
+  s <- rast(paste0(dir, t))
+  return(s)
+  })
+han <- mapply(function(ds1,ds2){
+map <- mask(ds1, clc_18, filename=paste0(dir, 'ms_', ds2))},han,tiffes)
+
+# Note: it is not required to save these intermediate files, it is just for memory management and because i am running each year separate, but the whole thing could be done at once.
+#load background with zeros to convert into binary masks
+msk <- rast('/Users/sputnik/Documents/bosque-nobosque/SINAP_areas/mask_col_0.tif')
+
+# Merge to obtain the binary (1/0) masks
+han <- mapply(function(r,t){
+  h <- merge(r,msk, filename=paste0(dir, 'bin_', t))}, han, tiffes)
+  
+#Produce first part of transition matrix 
+```
+
+## 4. Set the biomes to test
+```{r, eval=TRUE, echo=FALSE} 
+library(gridExtra)
+library(sf)
+library(ggplot2)
+
+mun <- st_read('/Users/sputnik/Library/CloudStorage/OneDrive-TempleUniversity/Research_Sommer_2023/harmonization_23/test_new/test_biomes.shp')
+
+mun <- split(mun, seq(nrow(mun)))
+
+sf_list <- lapply(mun, st_as_sf)
+
+# Create a list to store the plots
+plot_list <- vector("list", length(sf_list))
+
+# Loop through each sf object and create a plot
+for (i in seq_along(sf_list)) {
+  p <- ggplot(data = sf_list[[i]]) +
+    geom_sf() +
+    ggtitle(unique(sf_list[[i]]$biome, size=8)) +
+    theme_minimal()
+  plot_list[[i]] <- p
+}
+
+# Arrange the plots in a 3x2 grid
+grid.arrange(grobs = plot_list, ncol = 2, nrow = 3)
+
+```
+
+## 5. Extract the masks using the test biomes
+```{r, eval=FALSE}
+library(stringi)
+library(terra)
+library(dplyr)
+#load biomes map
+mun <- vect(paste0(dir, 'test_new/test_biomes.shp'))
+#Get list of biomes names. Remove spaces and tildes (optional)
+nam <- mun[[1]] %>%
+  unlist() %>%
+  as.vector() #%>%
+  #str_replace_all(" ", "") %>%
+  #stri_trans_general("Latin-ASCII")
+#Create a list of individual vector files
+mun <- mun %>% split("biome")
+#stack the maps and extract the test areas
+# han10 <- rast(han10)
+# han10 <- mapply(function(v,n){
+#   c <- cropMaskR(han10,v, outfile=paste0(dir, n, '.tif'))},mun,nam, SIMPLIFY=FALSE)
+# 
+# tiffes <- list.files(dir, '2017_cum')
+# han17 <- lapply(tiffes, function(t){
+#   s <- rast(paste0(dir, t))
+#   return(s)
+#   })
+# 
+# han17 <- mapply(function(v,n){
+#     c <- cropMaskR(han17,v, outfile=paste0(dir, '17_', n, '.tif'))},mun,nam, SIMPLIFY=FALSE)
+# 
+# smbyc_2 <- mapply(function(pol, nm){
+#   cropMaskR(FC_smbyc2, pol, outfile=paste0(dir, nm, '.tif'))},mun,nam, SIMPLIFY=FALSE)
+```
+## 7. Run the comparisons and extract contigency tables
+
+```{r,eval= FALSE, echo=TRUE}
+#load stacks with the hansen change maps for the differnt thresholds (22 bands)
+tiffes <- list.files(dir, pattern='ch_')
+glc_maps <- forMaps <- lapply(tiffes, function(t){
+  s <- rast(paste0(dir,t))
+  return(s)
+  })
+
+tiffes <- list.files(dir, pattern='id_')
+smbyc <- forMaps <- lapply(tiffes, function(t){
+  s <- rast(paste0(dir,t))
+  return(s)
+  })
+library(parallel)
+library(future.apply)
+
+crosstabm_function <- function(rast1, rast2_layer) {
+  crosstabm(rast1, rast2_layer)
+}
+
+result_list <- future_mapply(crosstabm_function, MoreArgs = list(rast1 = smbyc[[2]]), glc_maps_1, SIMPLIFY = FALSE)
+res_prct <- lapply(result_list, function(df){
+  total_pixels <- sum(df)
+  cm <- (df / total_pixels) * 100
+})
+save(result_list, file= paste0(dir, 'b_results_cord_oriental.RData'))
+# 
+crosstabm_function <- function(rast1, rast2_layer) {
+  crosstabm(rast1, rast2_layer)
+}
+# 
+result_list <- future_mapply(crosstabm_function, MoreArgs = list(rast1 = smbyc[[3]]), glc_maps_1, SIMPLIFY = FALSE)
+res_prct <- lapply(result_list, function(df){
+  total_pixels <- sum(df)
+  cm <- (df / total_pixels) * 100
+ })
+ save(result_list, file= paste0(dir,'c_results_SNSM.RData'))
+# 
+glc_maps_1 <- lapply(1:nlyr(glc_maps[[4]]), function(i) glc_maps[[4]][[i]])
+
+crosstabm_function <- function(rast1, rast2_layer) {
+  crosstabm(rast1, rast2_layer)
+}
+
+result_list <- future_mapply(crosstabm_function, MoreArgs = list(rast1 = smbyc[[4]]), glc_maps_1, SIMPLIFY = FALSE)
+res_prct <- lapply(result_list, function(df){
+  total_pixels <- sum(df)
+  cm <- (df / total_pixels) * 100
+})
+ save(result_list, file= paste0(dir, 'd_results_Bita.RData'))
+# 
+glc_maps_1 <- lapply(1:nlyr(glc_maps[[5]]), function(i) glc_maps[[5]][[i]])
+
+crosstabm_function <- function(rast1, rast2_layer) {
+  crosstabm(rast1, rast2_layer)
+}
+
+result_list <- future_mapply(crosstabm_function, MoreArgs = list(rast1 = smbyc[[5]]), glc_maps_1, SIMPLIFY = FALSE)
+res_prct <- lapply(result_list, function(df){
+  total_pixels <- sum(df)
+  cm <- (df / total_pixels) * 100
+})
+save(result_list, file= paste0(dir,'e_results_Nechi.RData'))
+# 
+glc_maps_1 <- lapply(1:nlyr(glc_maps[[6]]), function(i) glc_maps[[6]][[i]])
+
+crosstabm_function <- function(rast1, rast2_layer) {
+  crosstabm(rast1, rast2_layer)
+}
+
+result_list <- future_mapply(crosstabm_function, MoreArgs = list(rast1 = smbyc[[6]]), glc_maps_1, SIMPLIFY = FALSE)
+res_prct <- lapply(result_list, function(df){
+  total_pixels <- sum(df)
+  cm <- (df / total_pixels) * 100
+})
+save(result_list, file= paste0(dir,'b_results_yari.RData'))
+```
+
+```{r,eval=FALSE,echo=FALSE}
+
+tiffes <- list.files(dir,'ch_')
+cls <- lapply(paste0(dir,tiffes), rast)
+raster_dfs <- lapply(seq_along(cls), function(i) {
+  df <- as.data.frame(cls[[i]], xy = TRUE)
+  df$raster <- i
+  return(df)
+})
+
+# Combine into a single data.frame
+all_data <- do.call(rbind, raster_dfs)
+
+# Create a factor column for the classes
+all_data$value <- factor(all_data$value, levels = c(1,2,3,4), 
+                         labels = c("no-Forest permanence", "Forest loss", "Forest Gain", "Forest permanence"))
+
+# Assume `nam` is your vector of titles
+nam <- c("Title1", "Title2", "Title3", "Title4", "Title5", "Title6")  # Replace with your actual titles
+
+# Add a column for the titles
+all_data$title <- factor(rep(nam, each=nrow(all_data) / length(nam)))
+
+# Now plot using ggplot2
+ggplot(all_data, aes(x = x, y = y, fill = value)) +
+  geom_raster() +
+  facet_wrap(~ title, ncol = 2) +
+  scale_fill_manual(values = c("no-Forest permanence" = "#fffdd5", 
+                               "Forest loss" = "#ff0501", 
+                               "Forest Gain" = "#011aff", 
+                               "Forest permanence" = "#00441b")) +
+  theme_minimal() +
+  labs(fill = "Class")
+```
+
+## 6. Calculate change maps for the test biomes
+
+
+```{r, eval= FALSE, echo=TRUE}
+library(dplyr)
+library(purrr)
+tiffes <- list.files(paste0(dir,'test_new/'), pattern='Yari')
+forMaps <- lapply(tiffes, function(t){
+  s <- rast(paste0(dir, 'test_new/',t))
+  return(s)
+  })
+changeM <- ch_mapR(forMaps[[1]], forMaps[[2]]) 
+writeRaster(changeM, paste0(dir, 'ch_ZonobiomaHumedoTropicalYari-Chiribiquete.tif'), overwrite=TRUE)
+setwd(dir)
+tiffes <- list.files(dir, 'ch_')
+cls <- lapply(tiffes, tiffes, rast)
+
+
+cls<-lapply(tiffes, function(v){
+  t <- rast(paste0(dir,v))
+  return(t)
+  })
+```
+
+
+# 7. Load and select original square contingency matrices. 
+
+```{r, eval=FALSE, echo=TRUE}
+dir_old <- '/Users/sputnik/Documents/biomas_iavh/Final_results_Codename_Abril'
+
+#load cont tables masked 
+mat <- list.files(dir_old, 'ag_hansen_ideam')
+#have to forloop because it is not loading correctly. have never been able to apply on load. 
+mats2 <- list()
+for(i in  1:length(mat)){
+  mats2[i] <- load(paste0(dir_old, '/',mat[i]))
+}
+
+#load new matrices . 
+nmat <- list.files(dir, 'results')
+mats_new <- list()
+for(i in  5:5){
+  mats_new[i] <- load(paste0(dir,nmat[i]))
+}
+#result_list_1 <- result_list
+#result_list_2 <- result_list
+#result_list_3 <- result_list
+#result_list_4 <- result_list
+#result_list_5 <- result_list
+#result_list_6 <- result_list
+```
+
+# 8. Organize results and convert the whole thing into a tidy table.
+```{r, eval=FALSE, echo=TRUE}
+library(tidyr)
+# Get the old matrices into a list that i can manipulate base::get() function
+nn <- c(100, 20, 30, 40, 50, 55, 60, 65, 70, 75, 80, 85, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99)
+nmer <- list()
+for(i in 1:length(nn)){
+nmer[i] <- paste0('diff_mat_', nn[i])
+}
+old_matrices <- lapply(unlist(nmer), function(obj_name){
+    obj <- get(obj_name)})
+filter_dfs <- function(df_list, nam) {
+  selected_dfs <- df_list[names(df_list) %in% nam]
+  return(selected_dfs)
+}
+#
+# # Select the test biomes from the old matrices
+ old_matrices <- lapply(old_matrices, filter_dfs, nam)
+
+# Get the new matrices as a list to manipulate
+nn <- seq(1:6)
+nmer <- list()
+for(i in 1:length(nn)){
+nmer[i] <- paste0('result_list_', nn[i])  
+}
+new_matrices <- lapply(unlist(nmer), function(obj_name){
+    obj <- get(obj_name)})
+
+#These functions are used to extract the data from the new matrices (the way the structure is build is different, but this is a list of 6 biomes, each one with 22 sq contingency matrices, one per threshold evaluated)
+acc_calc <- function(df) accCalc(df)  # assuming accCalc is defined elsewhere
+add_threshold <- function(tib, threshold_value) mutate(tib, threshold = threshold_value)
+combine_tibbles <- function(list_of_tibbles) do.call(rbind, list_of_tibbles)
+add_biome <- function(df, n) mutate(df, biome = n)
+add_value_column <- function(tibble, value) {
+  tibble %>%
+    mutate(biome = value)
+}
+
+# Generate accus list
+generate_accus <- function(matrix_list) lapply(matrix_list, acc_calc)
+accus_new <- lapply(new_matrices, generate_accus)
+
+# Provide vector with the  threshold values (it could be pulled from somewhere, but i just wrote it, hopefully, i will not have to do this ever again) 
+nn <- c(100, 20, 30, 40, 50, 55, 60, 65, 70, 75, 80, 85, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99)
+
+# Add threshold, combine tibbles, and add biomes. 
+update_tibbles <- function(list_of_tibbles) mapply(add_threshold, list_of_tibbles, nn, SIMPLIFY = FALSE)
+accus_new <- lapply(accus_new, function(list_of_tibbles) combine_tibbles(update_tibbles(list_of_tibbles)))
+accus_new <- mapply(add_biome, accus_new, nam, SIMPLIFY = FALSE)
+accus_new <- do.call(rbind, accus_new)
+
+
+# Now i manipulate the old matrices. They have  a different structure because i created them differently and I am not going to repeat the whole thing.
+# 
+accus_old <- lapply(old_matrices, generate_accus)
+#manipulate the thing, sligtly differently, but does not matter. 
+accus_old <- mapply(
+  function(sublist, value) {
+    lapply(sublist, add_threshold, value)
+  },
+  accus_old,
+  nn,
+  SIMPLIFY = FALSE
+)
+
+accus_old <- lapply(accus_old, function(sublist) {
+  mapply(add_value_column, sublist, nam, SIMPLIFY = FALSE)
+})
+accus_old <- do.call(rbind, lapply(accus_old, function(df) do.call(rbind, df)))
+
+#add unique identifier to both lists and cbind them together. 
+accus_new <-accus_new %>% mutate(origin="Change_SMBYC") 
+accus_old <- accus_old %>% mutate(origin="calculated change")
+
+accus_old <- as_tibble(accus_old)
+accus_new <- as_tibble(accus_new)
+#some macheting here, the names of the class did not totally matrch for some reason, so I fixed it manually for the moment
+accus_new <- accus_new %>%
+  mutate(biome = case_when(
+    biome == "Orobioma Subandino Sierra nevada de Santa Marta" ~ "Zonobioma Humedo Tropical Yarí-Chiribiquete",
+    biome == "Peinobioma Bita" ~ "Orobioma Subandino Sierra nevada de Santa Marta",
+    biome == "Zonobioma Humedo Tropical Nechí-San Lucas" ~ "Peinobioma Bita",
+    biome == "Zonobioma Humedo Tropical Yarí-Chiribiquete" ~ "Zonobioma Humedo Tropical Nechí-San Lucas",
+    biome == "Helobioma Truandó" ~ "Helobioma Truandó",
+    biome == "Orobioma Andino Altoandino cordillera oriental" ~ "Orobioma Andino Altoandino cordillera oriental"))
+accusf <- rbind(accus_new, accus_old)
+accusf <- as_tibble(accusf)
+# add class names. 
+class <- c("no-Forest permanence", "Forest loss", "Forest Gain", "Forest permanence")
+rep <- seq(1:4)
+cl <- as.data.frame(t(rbind(class,rep)))
+accusf <- accusf %>%
+  left_join(cl, by = c("class" = "rep"))
+accusf <-  accusf[-2]
+accusf <- accusf %>% rename(class=class.y)
+
+accusf <- accusf %>%
+  mutate(class = replace_na(class, "overall"))
+#########################
+```
+
+
+# 10. Filter to get the overall accuracies
+
+```{r, eval=TRUE}
+library(dplyr)
+oamax <- accusf %>% filter(type=="OA")
+result <- oamax %>%
+     group_by(biome, origin) %>%
+    arrange(desc(accuracy)) %>%
+    slice(1)
+load('/Users/sputnik/Library/CloudStorage/OneDrive-TempleUniversity/Research_Sommer_2023/harmonization_23/result_oaf.RData')
+print(result)
+```
+
+
+# Draw charts.
+
+## 2 Load data
+```{r}
+
+load('/Users/sputnik/Documents/biomas_iavh/Final_results_Codename_Abril/accuracy_unmmasked_full.RData')
+accu <- accu_no_msk
+accu <- accu %>% ungroup()
+colnames(accu)[colnames(accu) == "accuracy"] <- "Agreement" # Agreement is the correct term in this case
+accu <- accu %>%
+  mutate(type = case_when(
+    type == "UA" ~ "User's",
+    type == "PA" ~ "Producer's",
+    type == "OA" ~ "Overall",
+    TRUE ~ type  # This leaves the value as-is if it doesn't match any of the above conditions
+  ))
+accu <- accu %>%
+  mutate(class = case_when(
+    class == "overall" ~ ".",
+    class == "forest" ~ "Persistent Forest",
+    class == "no forest" ~ "Persistent no forest",
+    class == "forest loss" ~ "Forest Loss",
+    TRUE ~ class  # This leaves the value as-is if it doesn't match any of the above conditions
+  ))
+
+```
+
+## Test plot with only 1
+```{r}
+namesv <- unique(accu$biome)
+where=namesv[4]
+where <- as.character(where)
+#pdf(file=paste(where, 'mask.pdf', sep='-'),
+#       width = 6, height=4)
+
+base_plot <- ggplot() +
+  geom_line(data = accu %>% group_by(class, type) %>% filter(biome == where, !(class == "." & type == "Overall")), 
+            aes(x=threshold, y=Agreement, color=interaction(class, type)), 
+            position = position_dodge(preserve = 'single'), size=1) +
+  ylim(0, 1)
+
+# Now, add the "..Overall" interaction line with increased size
+final_plot <- base_plot +
+  geom_line(data = accu %>% group_by(class, type) %>% filter(biome == where, class == "." & type == "Overall"), 
+            aes(x=threshold, y=Agreement, color=interaction(class, type)), 
+            position = position_dodge(preserve = 'single'), size=1.5) +  # increased size for visibility
+  labs(color = 'Agreement Type',
+       x = 'GLC Canopy cover threshold') +
+  ggtitle(where)
+
+
+final_plot
+
+```
+
+
+# Faceted plot with the test biomes:
+
+```{r}
+# Specify the indices of the biomes you want to plot
+indices <- c(64, 182, 274, 289, 375, 395)
+biomes_to_plot <- unique(accu$biome)[indices]
+
+# Create a new variable for wrapped labels
+accu$wrapped_biome <- str_wrap(accu$biome, width = 30) # Adjust width based on your needs
+name_biome <-  unique(accu$biome)
+spanish_biomes <- unique(accu$biome)
+english_biomes <- c("Helobiome Truandó", "High Andean Orobiome Cordillera Oriental", "Sub-Andean Orobiome Sierra Nevada de Santa Marta", "Peinobiome Bita", "Tropical Humid Zonobiome Nechí San Lucas", "Tropical Humid Zonobiome Yarí-Chiribiquete")
+accuf <-  accu %>% filter(biome %in% biomes_to_plot)
+accuf <- accuf %>%
+  mutate(Biome = case_when(
+    biome == "Helobioma Truandó" ~ english_biomes[1],
+    biome == "Orobioma Azonal Andino Altoandino cordillera oriental" ~ english_biomes[2],
+    biome == "Orobioma Subandino Sierra nevada de Santa Marta" ~ english_biomes[3],
+    biome == "Peinobioma Bita" ~ english_biomes[4],
+    biome == "Zonobioma Humedo Tropical Nechí-San Lucas" ~ english_biomes[5],
+    biome == "Zonobioma Humedo Tropical Yarí-Chiribiquete" ~ english_biomes[6]
+    # Add more mappings as needed
+  ))
+accuf <- accuf %>%
+  mutate(Reference = case_when(
+    type == "User's" ~ 'HGFC',
+    type == "Producer's" ~ 'SMByC',
+    type == "Overall" ~ "Overall",
+    TRUE ~ NA_character_ # This line is optional, handles unexpected 'type' values
+  ))
+
+accuf <- accuf %>%
+  mutate(class = case_when(
+    type == "Overall" ~ "Overall",
+    TRUE ~ class # This line is optional, handles unexpected 'type' values
+  ))
+
+accuf$Reference <- factor(accuf$Reference, levels = c("Overall", "HGFC", "SMByC"))
+accuf$class <- factor(accuf$class, levels = c("Overall", "Persistent Forest", "Persistent no forest", "Forest Loss"))
+                   
+custom_colors <- c("Overall" = "#70006e", 
+                   "Persistent Forest" = "#00441B",
+                   "Persistent no forest" = "#F9C31C",
+                   "Forest Loss" = "red")
+custom_line_types <- c("Overall" ="solid",
+                       "HGFC" = "22",
+                       "SMByC" = "solid")
+
+# Assuming accuf is your dataframe and custom_colors & custom_line_types are defined
+# Custom legend labels for line types
+line_type_labels <- c("HGFC" = "HGFC", "SMByC" = "SMByC", "Overall" = "Overall")
+
+# ggplot code
+base_plot <- ggplot(accuf, aes(x = threshold, y = Agreement, color = class, linetype = Reference)) +
+  geom_line(aes(group = interaction(class, Reference)), size = 0.6) +
+  scale_color_manual(values = custom_colors) +
+  scale_linetype_manual(values = custom_line_types, labels = line_type_labels) +
+  ylim(0, 1) +
+  labs(x = 'GFHC Canopy cover threshold (%)', color = 'Agreement Type', linetype = "Reference") +
+  facet_wrap(~Biome, ncol = 3, labeller = label_wrap_gen(width = 30)) +
+  theme(legend.position = "right",strip.text = element_text(size = 12)) +
+  guides(color = guide_legend(order = 1), # Ensure color legend is ordered correctly
+         linetype = guide_legend(order = 2)) # Customizing the line type legend
+
+# Print the plot
+print(base_plot)
+
+# Set A5 page dimensions and convert from mm to inches
+width_in <- 148 / 25.4
+height_in <- 210 / 25.4
+
+# Save the plot as a JPEG file
+
+ggsave(filename = paste0(dir, "agreement.jpeg"), plot = final_plot, device = "jpeg", width = width_in, height = height_in, units = "in", dpi = 300)
+
+```
+
+# Agreement Plot, only overall
+I will have to update the names of the biones (put them in English) and victor wants all together into a single facet where each line has the color of the corresponding biome
+
+# Faceted plot with the test biomes:
+
+```{r}
+# Specify the indices of the biomes you want to plot
+indices <- c(64, 182, 274, 289, 375, 395)
+biomes_to_plot <- unique(accu$biome)[indices]
+
+# Create a new variable for wrapped labels
+accu$wrapped_biome <- str_wrap(accu$biome, width = 30) # Adjust width based on your needs
+
+btp <- accu %>% filter(biome %in% biomes_to_plot) %>% filter(type=='Overall')
+
+col <- c("#ff01b7", "#4686fb", "#1be5b5","#509200", "#fbb938", "#e3440a")
+cols <- as.data.frame(cbind(wrapped_biome,col))
+# Start building the plot
+
+translation_vector <- setNames(biome_eng, name_biome)
+btp <- btp %>%
+  mutate(wrapped_biome = recode(biome, translation_vector))
+base_plot <- ggplot() +
+  geom_line(data = btp, 
+            aes(x = threshold, y = Agreement, colour = wrapped_biome), 
+            position = position_dodge(preserve = 'single'), size = 1) +
+  coord_cartesian(ylim = c(0.5, 1)) +  # Zoom in to show y-axis from 0.50 to 1
+  labs(color = cols[,2],
+       x = 'GLC Canopy cover threshold (%)',
+       y = "Overall Agreement") +
+  theme(legend.position = "none",
+        text = element_text(size = 14),  # Increase font size of all text
+        axis.title = element_text(size = 18),  # Increase font size of axis titles
+        axis.text = element_text(size = 14),  # Increase font size of axis text
+        legend.text = element_text(size = 8),  # Increase font size of legend text
+        legend.title = element_blank()) +  # Ensure no title for the legend
+  guides(color = guide_legend(ncol = 2))+
+        scale_color_manual(values = setNames(cols$col, cols$wrapped_biome)) +
+  scale_y_continuous(breaks = seq(0.5, 1, by = 0.1))  # Adjust y-axis ticks
+
+
+base_plot
+# Add the "..Overall" interaction line with increased size
+
+# Set A5 page dimensions and convert from mm to inches
+width_in <- 148 / 25.4
+height_in <- 210 / 25.4
+
+# Save the plot as a JPEG file
+
+ggsave(filename = paste0(dir, "o_agreement.jpeg"), plot = base_plot, device = "jpeg", width = width_in, height = height_in, units = "in", dpi = 300)
+
+```
+
+
+# Produce Harmonized 2010-2017 Change map. 
+
+```{r}
+arm17 <- rast('/Users/sputnik/Documents/bosque-nobosque/no_msk_armonized_2022/armonized_2017a.tif')
+arm10 <- rast('/Users/sputnik/Documents/bosque-nobosque/no_msk_armonized_2022/armonized_2010a.tif')
+bkg <- rast('/Users/sputnik/Documents/bosque-nobosque/SINAP_areas/mask_col_0.tif')
+arm17 <- merge(arm17,bkg)
+arm10 <- merge(arm10,bkg)
+msk <- rast('/Users/sputnik/Library/CloudStorage/OneDrive-TempleUniversity/Research Forests/Raster_inputs/mask_ideam90_17.tif')
+msk1 <- msk+1
+
+ch1017 <- ch_mapR(arm10,arm17)
+
+writeRaster(ch1017m, paste0(dir, 'ch1017arm_msk.tif'))
+```
+
+
