@@ -27,16 +27,19 @@ labels <- (masked$biome)
 biomat <- masked%>%split(.$biome)
            #Run individual example (documentation R)
 
+plot(biomat[[2]]$geometry)
+
+
 
 def <- lapply(biomat, function(sf){
   d <- echanges(sf,
                 lyrs = c('treecover2000','lossyear'),
                 path = getwd(),
                 eco_range = c(sf$threshld,100),
-                change_vals = seq(22,23,1),
+                change_vals = seq(21,22,1),
                 mc.cores = 4) 
                 })
-
+test <- biomat[[1]]
 
 suppressWarnings(
   def <- echanges(test,   # polígono 
