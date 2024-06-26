@@ -37,6 +37,12 @@ def <- lapply(biomat, function(sf){
                 change_vals = seq(22,23,1),
                 mc.cores = 4) 
                 })
+pt <-'/media/mnt/harmonizacion_hansenIdeam/downloads' 
+
+map(1:length(def), function(x) writeRaster(def[[x]], paste0(pt, '/', x, '_arm.tif')))
+
+
+
 
 
 suppressWarnings(
