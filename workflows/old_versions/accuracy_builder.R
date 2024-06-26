@@ -1,8 +1,9 @@
-
+# june 26 2024. Another old script from when I did not know better, it assembles the square contingency matrices and builds the dataframes to export accuracy metrics. 
+# This code is also quite complex and inefficient, and this can be done way better. Leave as a legacy and as a guide to follow if i ever (hopefully not)
+# need to do something like this again.  It hhas the paths from where the data is supposed to be, but i will be workng using the 'here' framework from now on. 
 load('/Users/sputnik/Documents/biomas_iavh/selected_areas/accut_f.RData')
 # just checking
 setwd('/Users/sputnik/Documents/biomas_iavh/final_march')
-
 
 #load cont tables no mask
 mat <- list.files('.', 'ag_hansen_')
@@ -11,7 +12,6 @@ mats <- list()
 for(i in  1:length(mat)){
   mats[i] <- load(mat[i])
 }
-
 
 #load cont tables masked 
 mat <- list.files('.', 'ag_id_ha')
@@ -81,8 +81,7 @@ plot(masker)
 
 
 namesv <- names(diff_mat_50)
-#fuckthis fucking shit again. Why does this guy not get it!!! It is obvious. But no, I have to go fuck myself (again)
- 
+
 accuracies <- function(diff_mat, t, biome){
   test <- diff_mat
   pixel_count <- sum(rowSums(test))
@@ -331,6 +330,3 @@ time(tt, tstep='years') <- 2000+0:21
 
 writeRaster(tt, filename='def00_21f.tif')#, overwrite=TRUE)
 map(1:nlyr(tt), function(x) writeRaster(tt[[x]], filename=toffs[x], overwrite=TRUE))
-
-tt[[1]]
-?writeRaster

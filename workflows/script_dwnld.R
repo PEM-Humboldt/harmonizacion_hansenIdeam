@@ -4,17 +4,18 @@
 setwd("~/Documents/biomas_iavh/Final_results_Codename_Abril") #keep in mind for the documentation, remove after)
 #setwd('/Users/sputnik/Documents/biomas_iavh/Biomas IAvH')
 packs <- c('terra', 'raster','parallel', 'R.utils', 'rvest','xml2','tidyverse', 'landscapemetrics', 'sf','dplyr','httr','getPass',
-           'rasterVis','rlang', 'rasterDT', 'ecochange')
+           'rasterVis','rlang', 'rasterDT', 'ecochange', 'here')
 
-#out.. <-  sapply(packs, install.packages, character.only = TRUE)
-out.. <-  sapply(packs, require, character.only = TRUE)
+# sapply(packs, install.packages, character.only = TRUE)
+sapply(packs, require, character.only = TRUE)
 
 #load Vector Data ROI
            # It uses the attribute table to extract data labeling and parameter definition information (name spatial unit) and splits in the different 
            # objects 
-masked <- st_read('biomes_attributes_msk.shp')
-#masked <- st_read('/Users/sputnik/Documents/biomas_iavh/Final_results_Codename_Abril/biomes_attributes_msk.shp')
-masked <- st_transform(masked,crs=4326)
+
+path_biomes <- here('vector_data', 'biomes_attributes_msk.shp')
+
+masked <- st_read(path_biomes)
 
 #here, you need to filter and select the biome you need. You can filter sf objects with tidyverse)
 masked <- masked%>%subset(!is.na(accurcy))
@@ -27,19 +28,16 @@ labels <- (masked$biome)
 biomat <- masked%>%split(.$biome)
            #Run individual example (documentation R)
 
-plot(biomat[[2]]$geometry)
-
-
 
 def <- lapply(biomat, function(sf){
   d <- echanges(sf,
                 lyrs = c('treecover2000','lossyear'),
-                path = getwd(),
+                path = '/media/mnt/harmonizacion_hansenIdeam/downloads',
                 eco_range = c(sf$threshld,100),
-                change_vals = seq(21,22,1),
+                change_vals = seq(22,23,1),
                 mc.cores = 4) 
                 })
-test <- biomat[[1]]
+
 
 suppressWarnings(
   def <- echanges(test,   # polígono 

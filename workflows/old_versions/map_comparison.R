@@ -1,14 +1,12 @@
 # This code reviewed on 18/04/2022
-#This code has some functionalities that can be converted and added to the other packages, leave it here but need to adjust it.
-#Now i remember, i had to develop it because it was too large for any com;uter to handle, si i split the maps compared them splitted 
+#This code has some functions that can be converted and added to the other packages, leave it here but need to adjust it.
+#This script aligns different maps to a commo crs and origin, using gdalwarp. 
+#It splits the raster into smaller chunks to process them independently and then assembles the whole thing back. This was 
+#necessary when i still used the raster package for memory requirements, but i am no sure  know if this is still necessary with terra. 
+#I had to develop it because it was too large for any computer to handle, so I split the maps compared them split
 #and assembled them again. I don't think this approach is necessary anymore. We use terra and more modern comparison methods. 
-#However, algining the rasters and doing class homologation between ideam and hansen was necessary. 
+#However, aligning the rasters and doing class equivalencies between IDEAM and HANSEN-GLC was necessary. 
 ##############################
-packs<-c('raster', 'rgdal', 'tidyverse', 'useful','diffeR', 'greenbrown', 'gdalUtils', 'gdalUtilities', 'furrr')
-sapply(packs, require, character.only = TRUE) 
-
-#Ready environment
-#dir.create('tempfiledir')
 tempdir=paste(getwd(),'tempfiledir', sep="/")
 rasterOptions(tmpdir=tempdir)
 

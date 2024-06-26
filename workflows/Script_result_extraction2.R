@@ -196,26 +196,10 @@ mun2
 
 writeOGR(mun2, ".", "biomes_attributes_msk", driver="ESRI Shapefile")
 
-
-
 mun$biome[1:10]
 mun <- mun%>%select(mun)
 
 attributes$biome[1:10]
-test_match <- function(ideam1, ideam2){
-  mun$biome==attributes$biome
-  
-  names <- as.list(mun$biome)
-  names <- map(1:length(names), function(x) as.character(names[[x]]))
-  namesu <- unlist(names)
-  
-  mun <- st_make_valid(mun)
-  dir()
-  
-  PA_noforest <- 
-    rm(accu_msk_wide)
-  <- pivot_wider(accu_msk, names_from = biome, values_from = accuracy)
-  
-  
-  diff_mat_50
+
+
   

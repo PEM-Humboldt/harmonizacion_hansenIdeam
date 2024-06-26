@@ -5,7 +5,8 @@ setwd('/Users/sputnik/Library/CloudStorage/OneDrive-TempleUniversity/Research Fo
 
 packs <- c('terra','parallel', 'R.utils', 'rvest','xml2','tidyverse', 'landscapemetrics', 'sf','dplyr','httr','getPass','gdalUtilities', 'viridis',
            'rasterVis','rlang', 'ecochange')
-out.. <-  sapply(packs, require, character.only = TRUE)
+#sapply(packs, install.packages, character.only = TRUE)
+sapply(packs, require, character.only = TRUE)
 
 #load Vector Datsa ROI
            # It uses the attribute table to extract data labeling and parameter defiition information (name spatial unit) and splits in the different 
@@ -34,5 +35,3 @@ tt <- stack(def)
 writeRaster(tt, 'test_ec1_10.tif')
 tt <- map(1:length(def), function(x) do.call(stack, def[[x]]))
 
-
-citation('ecochange')

@@ -141,27 +141,11 @@ sfs6 <- map(1:6, function(x) fasterize(sfs6[[x]], temp[[x]], field='type'))
 #harm <- do.call(stack, harm)
 
 sfs. <- map(sfs., . %>% fasterize(.$sfs., ))
-sfs.1<-map( 
 
-                                        # split  Harmonized by each one per year. This is the kind of process that i need to nest, because so far I have to cp+v each time,  looks awful and is very inefficient, but anyway.
-                                        # SEE, Iit gets really confusing
-
-
-
-                                        #convert names list from factor into character. Subsitute " " with "_"
 names <-  sub(" ", "_", names)
 
 map(1:length(harm), function(x) writeRaster(harm[[x]],paste('harm_bin', years[x], sep='_'))) 
 
-getwd()
-
-tiffes
-
-
-                                            
-let us solve this the right way. 
-
-each sfs list matches to each harm list. 
 
 harm1 <- map(1:length(temp),function(x) crop(harm[[1]], extent(temp[[x]])))
 harm1 <- map(1:length(temp),function(x) mask(harm1[[x]], temp[[x]]))
@@ -183,20 +167,11 @@ map(1:length(harm5), function(x) writeRaster(harm5[[x]],paste('harm5_bin', years
 map(1:length(harm6), function(x) writeRaster(harm6[[x]],paste('harm6_bin', years[x], sep='_'))) 
 
 
-sfs1[[1]]
 
-harm1[[1]]
-
-harm1
-
-[[1]]
 
 map(1:length(temp), function(x) writeRaster(temp[[x]], paste(names[x], 'msk.tif', sep='_')))
 
 
-plot(temp[[5]])
-
-=======
 harm <-list()
 for(i in 1:length(tiffes)){
   harm[i] <- raster(tiffes[i])}

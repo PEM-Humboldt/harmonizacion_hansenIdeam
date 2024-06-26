@@ -1,8 +1,9 @@
-
-                                        # This code is used to download all the forest- no forest binary masks from the 
+# This code is used to download all the forest- no forest binary masks from the 
 # Global forest cover Dataset by Hansen et al  using the package ForestChange.
-
-
+# June 26 2024. I used it to download the original forest mask from Hansem and splits them , calculates scare contingency matrices and does all the operations
+# It is quitre inefficient and i had to deal with all kind of issues, biomes without valid pixels, missing classes, memory requirements, and a long 
+# set of issues. I don't think i am going to runt this code ever again, nor think someone will repeat this, it makes no sense.
+# I would use a different approahc if i where to do this again, i have way better tools now.
 setwd("/media/mnt/Ecosistemas_Colombia/hansen_ideam")
 
 library(raster)
@@ -49,7 +50,7 @@ namesu <- namesu[-7]
 #†his part belongs to the hansen's maps.  
 
 #stack_forests <- stack(listr)
-#still dont send the stuff to process in nimbus, but keeps woking on the local machine. I decided to split it un parts for the moment
+#still don't send the stuff to process in nimbus, but keeps working on the local machine. I decided to split it un parts for the moment
 #Actually, parallelizing  can be done either setting the multicore  in future_map, or inside FCMask function. I am not sure which option is better. Will have to run a comparison test. I already solved this, I am running in my local machine (lab) but temp files are in Nimbus
 #this crops the Hansen stacks in the different biomes. Will use it in a while 
 mem_future <- 1000*1024^2 #this is toset the limit to 1GB
@@ -57,7 +58,7 @@ options(future.globals.maxSize= mem_future)
 plan(multisession, workers=7)
 a <-c(1:397)
 
-#All this can become a single function. I alreadyu have them. 
+#All this can become a single function. I already have them. 
 namesu2 <- namesu[a]
 biomat2 <- biomat[a]
 cropped <- future_map(a, function(x) crop(stack_forests, extent(biomat[[x]])))

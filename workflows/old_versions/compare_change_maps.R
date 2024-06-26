@@ -1,10 +1,5 @@
 # This code reviewd on 18/04/2022
 
-getwd()
-
-rm(list=ls())
-
-
 ##############################
 library(terra)
 library(ecoChange)
@@ -25,7 +20,6 @@ rasterOptions(tmpdir=tempdir)
 unixtools::set.tempdir('/media/mnt/Ecosistemas_Colombia/tempfiledir')
 
 setwd("/Forest_armonization/Ecosistemas_Colombia/hansen_ideam")
-
 
 mun <- st_read('/media/mnt/Ecosistemas_Colombia/biomas_wgs84.shp')
 labels <- (mun$BIOMA_IAvH)

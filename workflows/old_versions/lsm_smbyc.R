@@ -1,13 +1,10 @@
-
+# June 26 2024. I am not sure what the puprose of this is, but i think this is not important anymore. 
+#
 setwd('/Users/sputnik/Documents/bosque-nobosque/IDEAMfnf')
 
-dir()
-
-library(raster)
-library(tidyverse)
-library(landscapemetrics)
-library(furrr)
-library(scales)
+packs <- c('terra','parallel', 'R.utils', 'rvest','xml2','tidyverse', 'landscapemetrics', 'sf','dplyr','httr','getPass','gdalUtilities', 'viridis',
+           'rasterVis','rlang', 'ecochange')
+out.. <-  sapply(packs, require, character.only = TRUE)
 
 setwd('/storage/home/TU/tug76452/Forest_Armonization/bin_masked/outs') 
 
@@ -25,13 +22,6 @@ for (i in 1:length(tiffes2)){
   rat2[i] <- raster(tiffes2[i])
 }
 
-rat[1]
-rat2[1]
-
-
-tiffes1
-tiffes2
-
                                         #create temporary dir
 dir.create('tempfiledir')
                                         #obtain string with the path
@@ -44,12 +34,9 @@ plan(multisession, workers=7)
  options(future.globals.maxSize= mem_future)
 
 
-rat
                                         #rat <- do.call(stack, rat)
 areas <- future_map(1:length(rat), function(x) freq(rat[[x]]))
 areas <- map(1:length(areas), function(x) as_tibble(areas[[x]]))
-
-dir()
 
 # For SMBYC (4L)
                                         #create identifier
@@ -149,8 +136,6 @@ qplot(round, price, data=firm, group=id, color=id, geom='line') +
   geom_smooth(aes(group=interaction(size, type)))
 
 
-
-1370/2
 
 library(raster)
 
