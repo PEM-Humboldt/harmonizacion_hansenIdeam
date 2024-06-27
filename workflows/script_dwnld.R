@@ -1,9 +1,9 @@
 
-# Hansen forest  Map Downloader Using Ecochange and determining threshold from an attribute table. 
+# Hansen forest  Map Downloader Using the echanges() function from the ecochange R package (Lara et al., 2024) 
+#  and determining threshold from an attribute table. 
 
-setwd("~/Documents/biomas_iavh/Final_results_Codename_Abril") #keep in mind for the documentation, remove after)
-#setwd('/Users/sputnik/Documents/biomas_iavh/Biomas IAvH')
-packs <- c('terra', 'raster','parallel', 'R.utils', 'rvest','xml2','tidyverse', 'landscapemetrics', 'sf','dplyr','httr','getPass',
+#Load Packages 
+packs <- c('terra', 'raster','tidyverse', 'landscapemetrics', 'sf','dplyr',
            'rasterVis','rlang', 'rasterDT', 'ecochange', 'here')
 
 # sapply(packs, install.packages, character.only = TRUE)
@@ -12,59 +12,109 @@ sapply(packs, require, character.only = TRUE)
 #load Vector Data ROI
            # It uses the attribute table to extract data labeling and parameter definition information (name spatial unit) and splits in the different 
            # objects 
-
-path_biomes <- here('vector_data', 'biomes_attributes_msk.shp')
-
+#Define path to stored polygon data
+path_biomes <- here('vector_data', 'biomes_thresholds.shp')
+#Load the data
 masked <- st_read(path_biomes)
 
-#here, you need to filter and select the biome you need. You can filter sf objects with tidyverse)
-masked <- masked%>%subset(!is.na(accurcy))
-labels <- (masked$biome)
+#Remove biomes for which the threshold attribute is empty (NA)
+masked <- masked%>%subset(!is.na(agreement))
 
 #masked <- as(masked, 'Spatial')
-# split mun into list of independent polygons. You don't need it 
-#biomat <- masked%>%split(.$biome)
-
+# Split the vector file into a list of multipolygons (one for each biome)
 biomat <- masked%>%split(.$biome)
-           #Run individual example (documentation R)
 
 
-def <- lapply(biomat, function(sf){
-  d <- echanges(sf,
-                lyrs = c('treecover2000','lossyear'),
-                path = '/media/mnt/harmonizacion_hansenIdeam/downloads',
-                eco_range = c(sf$threshld,100),
-                change_vals = seq(22,23,1),
-                mc.cores = 4) 
+# Function to split a list into n roughly equal parts (deal with memory limitations)
+split_list <- function(input_list, n) {
+  # Calculate the number of elements in each sublist
+  split_size <- ceiling(length(input_list) / n)
+  
+  # Split the list into sublists
+  split(input_list, rep(1:n, each = split_size, length.out = length(input_list)))
+}
+
+# Split the list into 5 sublists
+biomat <- split_list(biomat, 5)
+
+# Check the lengths of the sublists to ensure even distribution
+sapply(biomat, length)
+        
+# Iterate the echanges over the polygon list. 
+def <- lapply(biomat, function(ls){
+  lapply(ls,function(sf){
+    d <- echanges(sf,
+                lyrs = c('treecover2000','lossyear'), # a~no inicial y a~no de perdida
+                path = '/media/mnt/harmonizacion_hansenIdeam/downloads', #directprio para domde se almacenan los datos descargados. si se deja getwd() se guardan en el directorio de trabajo
+                eco_range = c(sf$threshold,100), # asigna el umbral de dosel. el valor se lee de l tabla de atributos de cada pol'igono
+                change_vals = seq(22,23,1), # los anos de descarga (a partir de 2000. en este caso 2022 y 2023 con pasos de un ano)
+                binary_output = FALSE, # si es TRUE, produce mascaras binarias de bosque /no bosque, de lo contrario, deja el valor del umbarl para cada pixel
+                mc.cores = 5) # numero de nucleos para correr en paralelo. Solo aplica para sistemas Linux/MacOS
                 })
+})
+
+def_c <- do.call(c, def)
+
+# Convertir  los objetos en SpatRasters multibanda 
+process_rasters <- function(x) {
+  # convert RasterLayer to SpatRaster
+  convert_to_spatraster <- function(x) {
+    if (inherits(x, "RasterLayer")) {
+      return(terra::rast(x))
+    } else if (is.list(x)) {
+      return(lapply(x, convert_to_spatraster))
+    } else {
+      return(x)
+    }
+  }
+  # convert list of SpatRaster to multilayer SpatRaster
+  convert_to_multilayer <- function(x) {
+    if (is.list(x) && all(sapply(x, inherits, "SpatRaster"))) {
+      return(terra::rast(x))
+    } else if (is.list(x)) {
+      return(lapply(x, convert_to_multilayer))
+    } else {
+      return(x)
+    }
+  }
+  # Convert RasterLayer to SpatRaster
+  x <- convert_to_spatraster(x)
+  # Convert lists of SpatRaster to multilayer SpatRaster
+  x <- convert_to_multilayer(x)
+  return(x)
+}
+
+#Correr la funcion
+def_c <- lapply(def_c, process_rasters)
+
 pt <-'/media/mnt/harmonizacion_hansenIdeam/downloads' 
-
-map(1:length(def), function(x) writeRaster(def[[x]], paste0(pt, '/', x, '_arm.tif')))
-
+map(1:length(def_c), function(x) writeRaster(def_c[[x]], paste0(pt, '/', x, '_test.tif')))
 
 
+lapply(def_c, function(sr){
+  writeRaster()
+})
 
 
-suppressWarnings(
-  def <- echanges(test,   # polígono 
-                  lyrs = c('treecover2000','lossyear'),      # nombres de las capas
-                  path = getwd(),      # directorio de trabajo, en caso de que no desees trabajar en el directorio temporal
-                  eco_range = c(test$thrshld,100),      # Umbral de treecover2000
-                  change_vals = seq(21,22,1),      # en este caso, los años de pérdida, 
-                  mc.cores = 9)     # número de núcleos, solo funciona en sistema linux
-)
 
-#suppressWarnings(
-  def <- map(1:10, function(x) echanges(biomat[[x]],   # polígono 
-                  lyrs = c('treecover2000','lossyear'),
-                  eco = 'treecover2000',
-                  change = 'lossyear',      # nombres de las capas
-                  path = getwd(),      # directorio de trabajo, en caso de que no desees trabajar en el directorio temporal
-                  eco_range = c(biomat[[x]]$thrshld,100),      # Umbral de treecover2000
-                  change_vals = seq(0,21,1),      # en este caso, los años de pérdida, 
-                  mc.cores = 7))     # número de núcleos, solo funciona en sistema linux
+#test
+sf <- biomat[[1]]
+
+  ti <- echanges(sf,
+                lyrs = c('treecover2000','lossyear'), # a~no inicial y a~no de perdida
+                path = '/media/mnt/harmonizacion_hansenIdeam/downloads', #directorio para domde se almacenan los datos descargados. si se deja getwd() se guardan en el directorio de trabajo
+                eco_range = c(sf$threshlod,100), # asigna el umbral de dosel. el valor se lee de l tabla de atributos de cada pol'igono
+                change_vals = seq(22,23,1), # los anos de descarga (a partir de 2000. en este caso 2022 y 2023 con pasos de un ano)
+                binary_output = FALSE, # si es TRUE, produce mascaras binarias de bosque /no bosque, de lo contrario, deja el valor del umbarl para cada pixel
+                mc.cores = 5) # numero de nucleos para correr en paralelo. Solo aplica para sistemas Linux/MacOS
 
 
 
 
+#Ensamblar el mapa
+def. <- do.call(merge, def.)
 
+#establecer ruta
+
+#Exportar capas
+writeRaster(def., paste0(pt, '/', '2022_2023', '_arm.tif'))
