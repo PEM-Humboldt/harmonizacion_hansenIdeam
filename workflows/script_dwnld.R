@@ -1,5 +1,6 @@
 
 # Hansen forest  Map Downloader Using the echanges() function from the ecochange R package (Lara et al., 2024) 
+
 #  and determining threshold from an attribute table. 
 
 #Load Packages 
@@ -54,6 +55,18 @@ def <- lapply(biomat, function(ls){
 })
 
 def_c <- do.call(c, def)
+#test
+sf <- biomat[[1]]
+
+  ti <- echanges(sf,
+                lyrs = c('treecover2000','lossyear'), # a~no inicial y a~no de perdida
+                path = '/media/mnt/harmonizacion_hansenIdeam/downloads', #directprio para domde se almacenan los datos descargados. si se deja getwd() se guardan en el directorio de trabajo
+                eco_range = c(sf$threshlod,100), # asigna el umbarl de dosel. el valor se lee de l tabla de atributos de cada pol'igono
+                change_vals = seq(22,23,1), # los anos de descarga (a partir de 2000. en este caso 2022 y 2023 con pasos de un ano)
+                binary_output = FALSE, # si es TRUE, produce mascaras binarias de bosque /no bosque, de lo contrario, deja el valor del umbarl para cada pixel
+                mc.cores = 5) # numero de nucleos para correr en paralelo. Solo aplica para sistemas Linux/MacOS
+
+
 
 # Convertir  los objetos en SpatRasters multibanda 
 process_rasters <- function(x) {
@@ -90,12 +103,9 @@ def_c <- lapply(def_c, process_rasters)
 pt <-'/media/mnt/harmonizacion_hansenIdeam/downloads' 
 map(1:length(def_c), function(x) writeRaster(def_c[[x]], paste0(pt, '/', x, '_test.tif')))
 
-
 lapply(def_c, function(sr){
   writeRaster()
 })
-
-
 
 #test
 sf <- biomat[[1]]
@@ -109,12 +119,13 @@ sf <- biomat[[1]]
                 mc.cores = 5) # numero de nucleos para correr en paralelo. Solo aplica para sistemas Linux/MacOS
 
 
-
+def. <- lapply(def, process_rasters)
 
 #Ensamblar el mapa
 def. <- do.call(merge, def.)
 
 #establecer ruta
+pt <-'/media/mnt/harmonizacion_hansenIdeam/downloads' 
 
 #Exportar capas
 writeRaster(def., paste0(pt, '/', '2022_2023', '_arm.tif'))
