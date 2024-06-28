@@ -4,7 +4,7 @@
 #  and determining threshold from an attribute table. 
 
 #Load Packages 
-packs <- c('terra', 'raster','tidyverse', 'landscapemetrics', 'sf','dplyr',
+packs <- c('terra', 'raster','purrr', 'landscapemetrics', 'sf','dplyr',
            'rasterVis','rlang', 'rasterDT', 'ecochange', 'here')
 
 # sapply(packs, install.packages, character.only = TRUE)
@@ -36,7 +36,7 @@ split_list <- function(input_list, n) {
 }
 
 # Split the list into 5 sublists
-biomat <- split_list(biomat, 5)
+biomat <- split_list(biomat, 10)
 
 # Check the lengths of the sublists to ensure even distribution
 sapply(biomat, length)
@@ -46,7 +46,8 @@ def <- lapply(biomat, function(ls){
   lapply(ls,function(sf){
     d <- echanges(sf,
                 lyrs = c('treecover2000','lossyear'), # a~no inicial y a~no de perdida
-                path = '/media/mnt/harmonizacion_hansenIdeam/downloads', #directprio para domde se almacenan los datos descargados. si se deja getwd() se guardan en el directorio de trabajo
+                # path = '/media/mnt/harmonizacion_hansenIdeam/downloads', #directorio para domde se almacenan los datos descargados. si se deja getwd() se guardan en el directorio de trabajo
+                path = '/storage/home/TU/tug76452/harmonizacion_hansenIdeam/downloads',
                 eco_range = c(sf$threshold,100), # asigna el umbral de dosel. el valor se lee de l tabla de atributos de cada pol'igono
                 change_vals = seq(22,23,1), # los anos de descarga (a partir de 2000. en este caso 2022 y 2023 con pasos de un ano)
                 binary_output = FALSE, # si es TRUE, produce mascaras binarias de bosque /no bosque, de lo contrario, deja el valor del umbarl para cada pixel
@@ -66,7 +67,7 @@ sf <- biomat[[1]]
                 binary_output = FALSE, # si es TRUE, produce mascaras binarias de bosque /no bosque, de lo contrario, deja el valor del umbarl para cada pixel
                 mc.cores = 5) # numero de nucleos para correr en paralelo. Solo aplica para sistemas Linux/MacOS
 
-
+getwd()
 
 # Convertir  los objetos en SpatRasters multibanda 
 process_rasters <- function(x) {
