@@ -1,4 +1,4 @@
-
+ 
 # Hansen forest  Map Downloader Using the echanges() function from the ecochange R package (Lara et al., 2024) 
 
 #  and determining threshold from an attribute table. 
@@ -36,7 +36,7 @@ split_list <- function(input_list, n) {
 }
 
 # Split the list into 5 sublists
-biomat <- split_list(biomat, 10)
+biomat <- split_list(biomat, 15)
 
 # Check the lengths of the sublists to ensure even distribution
 sapply(biomat, length)
@@ -99,6 +99,9 @@ def_c <- do.call(c, def_c)
 
 def. <- reduce(def_c, terra::merge)
 
+
+
+def
 
 writeRaster(def., '/storage/home/TU/tug76452/harmonizacion_hansenIdeam/downloads/armonized_2223.tif')
 
