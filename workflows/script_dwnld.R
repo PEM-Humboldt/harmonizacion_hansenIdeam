@@ -55,19 +55,9 @@ def <- lapply(biomat, function(ls){
                 })
 })
 
-def_c <- do.call(c, def)
-#test
-sf <- biomat[[1]]
 
-  ti <- echanges(sf,
-                lyrs = c('treecover2000','lossyear'), # a~no inicial y a~no de perdida
-                path = '/media/mnt/harmonizacion_hansenIdeam/downloads', #directprio para domde se almacenan los datos descargados. si se deja getwd() se guardan en el directorio de trabajo
-                eco_range = c(sf$threshlod,100), # asigna el umbarl de dosel. el valor se lee de l tabla de atributos de cada pol'igono
-                change_vals = seq(22,23,1), # los anos de descarga (a partir de 2000. en este caso 2022 y 2023 con pasos de un ano)
-                binary_output = FALSE, # si es TRUE, produce mascaras binarias de bosque /no bosque, de lo contrario, deja el valor del umbarl para cada pixel
-                mc.cores = 5) # numero de nucleos para correr en paralelo. Solo aplica para sistemas Linux/MacOS
+# I think it is better to convert the rasters int spatrasters and stack the bands when it is still a nested list. 
 
-getwd()
 
 # Convertir  los objetos en SpatRasters multibanda 
 process_rasters <- function(x) {
@@ -98,8 +88,22 @@ process_rasters <- function(x) {
   return(x)
 }
 
-#Correr la funcion
-def_c <- lapply(def_c, process_rasters)
+
+#Pending tor run 
+def_c <- lapply(def,function(ls){
+    lapply(ls,process_rasters)
+    }
+
+def_c <- do.call(c, def_c)
+#test
+
+def. <- reduce(def_c, terra::merge)
+
+
+writeRaster(def., '/storage/home/TU/tug76452/harmonizacion_hansenIdeam/downloads/armonized_2223.tif')
+
+###########################################################################################################
+def_c[1]
 
 pt <-'/media/mnt/harmonizacion_hansenIdeam/downloads' 
 map(1:length(def_c), function(x) writeRaster(def_c[[x]], paste0(pt, '/', x, '_test.tif')))
@@ -122,11 +126,28 @@ sf <- biomat[[1]]
 
 def. <- lapply(def, process_rasters)
 
+
+
+def_c <- unlist(def_c, recursive = FALSE)
+
+
+def_c
+
 #Ensamblar el mapa
-def. <- do.call(merge, def.)
+def. <- do.call(terra::mosaic, def_c)
 
 #establecer ruta
 pt <-'/media/mnt/harmonizacion_hansenIdeam/downloads' 
 
 #Exportar capas
 writeRaster(def., paste0(pt, '/', '2022_2023', '_arm.tif'))
+
+
+
+def_c[1]
+
+def_c[[1]]
+
+
+
+sapply(def_c, class)
