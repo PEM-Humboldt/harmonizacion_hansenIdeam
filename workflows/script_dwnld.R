@@ -6,31 +6,25 @@
 #Load Packages 
 packs <- c('terra', 'raster','purrr', 'landscapemetrics', 'sf','dplyr',
            'rasterVis','rlang', 'rasterDT', 'ecochange', 'here')
-
 # sapply(packs, install.packages, character.only = TRUE)
 sapply(packs, require, character.only = TRUE)
-
 #load Vector Data ROI
            # It uses the attribute table to extract data labeling and parameter definition information (name spatial unit) and splits in the different 
            # objects 
 #Define path to stored polygon data
+
 path_biomes <- here('vector_data', 'biomes_thresholds.shp')
 #Load the data
 masked <- st_read(path_biomes)
-
 #Remove biomes for which the threshold attribute is empty (NA)
 masked <- masked%>%subset(!is.na(agreement))
-
-#masked <- as(masked, 'Spatial')
-# Split the vector file into a list of multipolygons (one for each biome)
+#Split the vector into a list of individual polygons
 biomat <- masked%>%split(.$biome)
-
 
 # Function to split a list into n roughly equal parts (deal with memory limitations)
 split_list <- function(input_list, n) {
   # Calculate the number of elements in each sublist
-  split_size <- ceiling(length(input_list) / n)
-  
+  split_size <- ceiling(length(input_list) / n)  
   # Split the list into sublists
   split(input_list, rep(1:n, each = split_size, length.out = length(input_list)))
 }
@@ -38,11 +32,10 @@ split_list <- function(input_list, n) {
 # Split the list into 5 sublists
 biomat <- split_list(biomat, 15)
 
-# Check the lengths of the sublists to ensure even distribution
-sapply(biomat, length)
+length(biomat)
         
 # Iterate the echanges over the polygon list. 
-def <- lapply(biomat, function(ls){
+system.time(def <- lapply(biomat, function(ls){
   lapply(ls,function(sf){
     d <- echanges(sf,
                 lyrs = c('treecover2000','lossyear'), # a~no inicial y a~no de perdida
@@ -52,11 +45,8 @@ def <- lapply(biomat, function(ls){
                 change_vals = seq(22,23,1), # los anos de descarga (a partir de 2000. en este caso 2022 y 2023 con pasos de un ano)
                 binary_output = FALSE, # si es TRUE, produce mascaras binarias de bosque /no bosque, de lo contrario, deja el valor del umbarl para cada pixel
                 mc.cores = 5) # numero de nucleos para correr en paralelo. Solo aplica para sistemas Linux/MacOS
-                })
-})
-
-
-# I think it is better to convert the rasters int spatrasters and stack the bands when it is still a nested list. 
+  })
+}))
 
 
 # Convertir  los objetos en SpatRasters multibanda 
@@ -83,21 +73,23 @@ process_rasters <- function(x) {
   }
   # Convert RasterLayer to SpatRaster
   x <- convert_to_spatraster(x)
-  # Convert lists of SpatRaster to multilayer SpatRaster
+  # Convert the individual lists of single band  SpatRaster to multilayer SpatRasters
   x <- convert_to_multilayer(x)
   return(x)
 }
-
-
-#Pending tor run 
-def_c <- lapply(def,function(ls){
+system.time(def <- lapply(def,function(ls){
     lapply(ls,process_rasters)
-    }
+    }))
+out_dir <- here('downloads')
+map(1:length(def), function(x) writeRaster(def[[x]], paste0(out_dir, '/', x,'_tif')))#, progress=TRUE) 
 
-def_c <- do.call(c, def_c)
-#test
 
-def. <- reduce(def_c, terra::merge)
+# we hebben een problem here, R crashes when trying to merge. Will export the data, clean the environment and load again
+def <- do.call(terra::merge, def)
+
+
+
+def.<- reduce(def_c, terra::merge)
 
 
 
