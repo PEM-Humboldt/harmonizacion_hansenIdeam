@@ -38,7 +38,7 @@ sapply(biomat, length)
 
                                         # Iterate the ecochange::echanges() over the polygon list. 
                                         # Iterate over each subset (pending to fix) 
-n <- 15
+n <- 3
 biomat_r <- biomat[[n]]
 
 system.time(#def <- lapply(biomat, function(ls){
@@ -75,6 +75,9 @@ def1 <- lapply(def1, function(ls){
     })
 
 
+
+379-353
+
 #WriteRasters
 map(1:length(def1), function(x) writeRaster(def1[[x]], paste0(out_dir, '/',n, '_', x,'.tif')))#, progress=TRUE) 
 #################################################################
@@ -83,13 +86,19 @@ map(1:length(def1), function(x) writeRaster(def1[[x]], paste0(out_dir, '/',n, '_
 ## set target crs:
 cr.  <- "+proj=tmerc +lat_0=4.596200416666666 +lon_0=-74.07750791666666 +k=1 +x_0=1000000 +y_0=1000000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"  
 
-#set list of files to reproject
+
+                                        #set list of files to reproject
 infiles <- file.path(out_dir, list.files(out_dir, pattern = ".tif"))
-#create folder to store the new rasters 
+
+                                        #create folder to store the new rasters 
 dir.create(here('reproj'))
 newdir <- here('reproj')
-# set list of output paths
-outfiles <- file.path(newdir, list.files)
+
+                                        # set list of output paths
+
+outfiles <- file.path(newdir, basename(infiles))
+
+
 
 
 
@@ -146,3 +155,4 @@ pt <-'/media/mnt/harmonizacion_hansenIdeam/downloads'
 #Exportar capas
 writeRaster(def., paste0(pt, '/', '2022_2023', '_arm.tif'))
 
+typeof(infiles)
