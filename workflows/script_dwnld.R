@@ -1,17 +1,16 @@
  
 # Hansen forest  Map Downloader Using the echanges() function from the ecochange R package (Lara et al., 2024) 
-
-#  and determining threshold from an attribute table. 
-
+# for individual polygons using a canopy threshold provided as attribute
 
                                         #Load Packages 
 packs <- c('terra', 'raster','purrr', 'landscapemetrics', 'sf','dplyr',
-           'rasterVis','rlang', 'rasterDT', 'ecochange', 'here')
-# sapply(packs, install.packages, character.only = TRUE)
+           'rlang', 'rasterDT', 'ecochange', 'here', 'gdalUtilities')
+
+# sapply(packs, install.packages, character.only = TRUE) #Install package if necessary
 sapply(packs, require, character.only = TRUE)
 
                                         #Define paths
-
+# input polygons
 path_biomes <- here('vector_data', 'biomes_thresholds.shp')
 # Set output directory
 out_dir <- here('downloads')
@@ -23,7 +22,7 @@ masked <- masked%>%subset(!is.na(agreement))
 #Split the vector into a list of individual polygons
 biomat <- masked%>%split(.$biome)
 
-# Function to split a list into n  equal parts (deal with memory limitations)
+# Function to split a list into n equal parts (deals with memory limitations distributing the work load in multiple subsets)
 split_list <- function(input_list, n) {
   # Calculate the number of elements in each sublist
   split_size <- ceiling(length(input_list) / n)  
@@ -31,17 +30,17 @@ split_list <- function(input_list, n) {
   split(input_list, rep(1:n, each = split_size, length.out = length(input_list)))
 }
 
-
                                         # Split the list into 5 sublists
 biomat <- split_list(biomat, 15)
+# Check Number of polyons/subset
+sapply(biomat, length)
 
-length(biomat)
- 
-n <- 15
+
+                                        # Iterate the ecochange::echanges() over the polygon list. 
+                                        # Iterate over each subset (pending to fix) 
+n <- 3
 biomat_r <- biomat[[n]]
 
-
-# Iterate the echanges over the polygon list. 
 system.time(#def <- lapply(biomat, function(ls){
 def1 <- lapply(biomat_r,function(sf){
     d <- echanges(sf,
@@ -76,14 +75,34 @@ def1 <- lapply(def1, function(ls){
     })
 
 
+
+379-353
+
 #WriteRasters
 map(1:length(def1), function(x) writeRaster(def1[[x]], paste0(out_dir, '/',n, '_', x,'.tif')))#, progress=TRUE) 
-#################################################
+#################################################################
+
+# I know why it crashes, because of the different CRS. Need to reproject/align first.
+## set target crs:
+cr.  <- "+proj=tmerc +lat_0=4.596200416666666 +lon_0=-74.07750791666666 +k=1 +x_0=1000000 +y_0=1000000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"  
+
+
+                                        #set list of files to reproject
+infiles <- file.path(out_dir, list.files(out_dir, pattern = ".tif"))
+
+                                        #create folder to store the new rasters 
+dir.create(here('reproj'))
+newdir <- here('reproj')
+
+                                        # set list of output paths
+
+outfiles <- file.path(newdir, basename(infiles))
 
 
 
 
-# we hebben een problem here, R crashes when trying to merge. Will export the data, clean the environment and load again
+
+
 def <- do.call(terra::merge, def)
 
 
@@ -136,3 +155,4 @@ pt <-'/media/mnt/harmonizacion_hansenIdeam/downloads'
 #Exportar capas
 writeRaster(def., paste0(pt, '/', '2022_2023', '_arm.tif'))
 
+typeof(infiles)
