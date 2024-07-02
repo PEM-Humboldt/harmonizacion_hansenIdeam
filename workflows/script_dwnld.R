@@ -83,7 +83,6 @@ map(1:length(def1), function(x) writeRaster(def1[[x]], paste0(out_dir, '/',n, '_
 
 
 
-
 # we hebben een problem here, R crashes when trying to merge. Will export the data, clean the environment and load again
 def <- do.call(terra::merge, def)
 
