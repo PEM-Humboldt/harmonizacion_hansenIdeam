@@ -38,7 +38,7 @@ sapply(biomat, length)
 
                                         # Iterate the ecochange::echanges() over the polygon list. 
                                         # Iterate over each subset (pending to fix) 
-n <- 3
+n <- 8
 biomat_r <- biomat[[n]]
 
 system.time(#def <- lapply(biomat, function(ls){
@@ -110,6 +110,9 @@ reference_crs <- reference_info$coordinateSystem$wkt
 # Extract pixel size from reference raster
 reference_pixel_size <- c(reference_info$geoTransform[2], -reference_info$geoTransform[6])
 
+                                        # Initialize a list to keep track of skipped files
+skipped_files <- list()
+
 
 # Function to postprocess rasters
 process_raster <- function(input_file, output_file, reference_crs, reference_pixel_size, temp_dir) {
@@ -123,6 +126,14 @@ process_raster <- function(input_file, output_file, reference_crs, reference_pix
                           tr = reference_pixel_size, r = "near", tap = TRUE, overwrite = TRUE)
   # Trim the raster
   r <- rast(temp_aligned_file)
+  if (all(is.na(values(r)))) {
+      message(paste("Skipping raster with only NAs:", input_file))
+      skipped_files <<- c(skipped_files, input_file)
+      unlink(temp_file)
+      unlink(temp_aligned_file)
+      return(NULL)
+        }
+  r <- rast(temp_aligned_file)
   r_trimmed <- trim(r)
   temp_trimmed_file <- tempfile(tmpdir = temp_dir, fileext = ".tif")
   writeRaster(r_trimmed, temp_trimmed_file, filetype = "GTiff", overwrite = TRUE, datatype = "INT1U")
@@ -134,6 +145,8 @@ process_raster <- function(input_file, output_file, reference_crs, reference_pix
   unlink(temp_trimmed_file)
 }
 
+
+
 # Apply the function to all input files
 system.time({
   Map(process_raster, infiles, outfiles, MoreArgs = list(reference_crs = reference_crs, reference_pixel_size = reference_pixel_size, temp_dir = temp_dir))
@@ -142,7 +155,17 @@ system.time({
 
 ##############################################################
 
-def <- do.call(terra::merge, def)
+# Create directory to store the aligned rasters
+
+#Define the paths
+## Set reference template to align
+## set path to reprojected ffiles
+infiles <- file.path(newdir, list.files(newdir, pattern = ".tif"))
+
+arm <- lapply(infiles, rast)
+
+
+arm2 <- do.call(terra::merge, arm)
 
 def.<- reduce(def_c, terra::merge)
 
@@ -181,4 +204,3 @@ pt <-'/media/mnt/harmonizacion_hansenIdeam/downloads'
 #Exportar capas
 writeRaster(def., paste0(pt, '/', '2022_2023', '_arm.tif'))
 
-typeof(infiles)
