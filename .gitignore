@@ -12,3 +12,5 @@ downloads/
 .DS_Store
 reference/
 tmp/
+reproj/
+._.DS_Store

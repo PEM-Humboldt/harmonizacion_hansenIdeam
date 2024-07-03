@@ -84,7 +84,7 @@ map(1:length(def1), function(x) writeRaster(def1[[x]], paste0(out_dir, '/',n, '_
 cr.  <- "+proj=tmerc +lat_0=4.596200416666666 +lon_0=-74.07750791666666 +k=1 +x_0=1000000 +y_0=1000000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"  
 
 # Create directory to store the aligned rasters
-dir.create(here('reproj'))
+#dir.create(here('reproj'))
 newdir <- here('reproj')
 
 #Define the paths
@@ -96,7 +96,6 @@ infiles <- file.path(out_dir, list.files(out_dir, pattern = ".tif"))
 outfiles <- file.path(newdir, basename(infiles))
 
 #create temp dir. 
-dir.create(here('tmp'))
 temp_dir <- here('tmp')
 
 # Ensure the directory exists
@@ -112,68 +111,45 @@ reference_crs <- reference_info$coordinateSystem$wkt
 reference_pixel_size <- c(reference_info$geoTransform[2], -reference_info$geoTransform[6])
 
 
-# Function to process rasters
-# Function to process rasters
+# Function to postprocess rasters
 process_raster <- function(input_file, output_file, reference_crs, reference_pixel_size, temp_dir) {
   temp_file <- tempfile(tmpdir = temp_dir, fileext = ".tif")
-  
   # Change data type and compress
   gdalUtilities::gdal_translate(src_dataset = input_file, dst_dataset = temp_file, of = "GTiff",
                                 co = c("COMPRESS=LZW", "TILED=YES", "PIXELTYPE=SIGNEDBYTE"))
-  
   temp_aligned_file <- tempfile(tmpdir = temp_dir, fileext = ".tif")
-  
   # Reproject and align
   gdalUtilities::gdalwarp(srcfile = temp_file, dstfile = temp_aligned_file, t_srs = reference_crs, 
                           tr = reference_pixel_size, r = "near", tap = TRUE, overwrite = TRUE)
-  
   # Trim the raster
   r <- rast(temp_aligned_file)
   r_trimmed <- trim(r)
-  writeRaster(r_trimmed, output_file, filetype = "GTiff", overwrite = TRUE, options = c("COMPRESS=LZW", "TILED=YES"))
-  
+  temp_trimmed_file <- tempfile(tmpdir = temp_dir, fileext = ".tif")
+  writeRaster(r_trimmed, temp_trimmed_file, filetype = "GTiff", overwrite = TRUE, datatype = "INT1U")
+  gdalUtilities::gdal_translate(src_dataset = temp_trimmed_file, dst_dataset = output_file, of = "GTiff",
+                                                                 co = c("COMPRESS=LZW", "TILED=YES"))
   # Clean up temporary files
   unlink(temp_file)
   unlink(temp_aligned_file)
+  unlink(temp_trimmed_file)
 }
 
-# Apply the function to all input filesk
+# Apply the function to all input files
 system.time({
-  Map(process_raster, input_files, output_files, MoreArgs = list(reference_crs = reference_crs, reference_pixel_size = reference_pixel_size, temp_dir = temp_dir))
+  Map(process_raster, infiles, outfiles, MoreArgs = list(reference_crs = reference_crs, reference_pixel_size = reference_pixel_size, temp_dir = temp_dir))
 })
 
 
-
-
-system.time(
-  malr <- Map(function(x,y)
-    align_rasters(
-      unaligned=x,
-      reference=reference.,
-      dstfile=y,
-      nThreads=8,
-      verbose=TRUE),
-    infiles,outfiles)
-)
-
-
-
-
-
+##############################################################
 
 def <- do.call(terra::merge, def)
-
-
 
 def.<- reduce(def_c, terra::merge)
 
 
-
-def1
-
 writeRaster(def., '/storage/home/TU/tug76452/harmonizacion_hansenIdeam/downloads/armonized_2223.tif')
 
-###########################################################################################################
+#######################SCRATCH####################################################################################
 def_c[1]
 
 pt <-'/media/mnt/harmonizacion_hansenIdeam/downloads' 
@@ -195,14 +171,6 @@ sf <- biomat[[1]]
                 mc.cores = 5) # numero de nucleos para correr en paralelo. Solo aplica para sistemas Linux/MacOS
 
 
-def. <- lapply(def, process_rasters)
-
-
-
-def_c <- unlist(def_c, recursive = FALSE)
-
-
-def_c
 
 #Ensamblar el mapa
 def. <- do.call(terra::mosaic, def_c)
