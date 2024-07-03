@@ -1,7 +1,6 @@
  
 # Hansen forest  Map Downloader Using the echanges() function from the ecochange R package (Lara et al., 2024) 
 # for individual polygons using a canopy threshold provided as attribute
-
                                         #Load Packages 
 packs <- c('terra', 'raster','purrr', 'landscapemetrics', 'sf','dplyr',
            'rlang', 'rasterDT', 'ecochange', 'here', 'gdalUtilities', 'jsonlite')
@@ -22,7 +21,7 @@ masked <- masked%>%subset(!is.na(agreement))
 #Split the vector into a list of individual polygons
 biomat <- masked%>%split(.$biome)
 
-# Function to split a list into n equal parts (deals with memory limitations distributing the work load in multiple subsets)
+# Function to split a list into n equal parts (deals with memory limitations distributing the work load into smaller sets)
 split_list <- function(input_list, n) {
   # Calculate the number of elements in each sublist
   split_size <- ceiling(length(input_list) / n)  
@@ -35,8 +34,6 @@ biomat <- split_list(biomat, 15)
 # Check Number of polyons/subset
 sapply(biomat, length)
 
-
-                                        # Iterate the ecochange::echanges() over the polygon list. 
                                         # Iterate over each subset (pending to fix) 
 n <- 8
 biomat_r <- biomat[[n]]
@@ -74,14 +71,9 @@ def1 <- lapply(def1, function(ls){
     r <- rast(ls)
     })
 
-
 #WriteRasters
-map(1:length(def1), function(x) writeRaster(def1[[x]], paste0(out_dir, '/',n, '_', x,'.tif')))#, progress=TRUE) 
+map(1:length(def1), function(x) writeRaster(def1[[x]], paste0(out_dir, '/',n, '_', x,'.tif')))
 #################################################################
-
-# I know why it crashes, because of the different CRS. Need to reproject/align first.
-## set target crs:
-cr.  <- "+proj=tmerc +lat_0=4.596200416666666 +lon_0=-74.07750791666666 +k=1 +x_0=1000000 +y_0=1000000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"  
 
 # Create directory to store the aligned rasters
 #dir.create(here('reproj'))
@@ -112,7 +104,6 @@ reference_pixel_size <- c(reference_info$geoTransform[2], -reference_info$geoTra
 
                                         # Initialize a list to keep track of skipped files
 skipped_files <- list()
-
 
 # Function to postprocess rasters
 process_raster <- function(input_file, output_file, reference_crs, reference_pixel_size, temp_dir) {
@@ -145,57 +136,16 @@ process_raster <- function(input_file, output_file, reference_crs, reference_pix
   unlink(temp_trimmed_file)
 }
 
-
-
 # Apply the function to all input files
 system.time({
   Map(process_raster, infiles, outfiles, MoreArgs = list(reference_crs = reference_crs, reference_pixel_size = reference_pixel_size, temp_dir = temp_dir))
 })
 
-
 ##############################################################
-
-# Create directory to store the aligned rasters
-
-#Define the paths
-## Set reference template to align
-## set path to reprojected ffiles
 infiles <- file.path(newdir, list.files(newdir, pattern = ".tif"))
 
 arm <- lapply(infiles, rast)
 arm2 <- do.call(terra::merge, arm)
 
-
 writeRaster(arm2, here(out_dir, 'arm_22_23.tif'))
 #######################SCRATCH####################################################################################
-def_c[1]
-
-pt <-'/media/mnt/harmonizacion_hansenIdeam/downloads' 
-map(1:length(def_c), function(x) writeRaster(def_c[[x]], paste0(pt, '/', x, '_test.tif')))
-
-lapply(def_c, function(sr){
-  writeRaster()
-})
-
-#test
-sf <- biomat[[1]]
-
-  ti <- echanges(sf,
-                lyrs = c('treecover2000','lossyear'), # a~no inicial y a~no de perdida
-                path = '/media/mnt/harmonizacion_hansenIdeam/downloads', #directorio para domde se almacenan los datos descargados. si se deja getwd() se guardan en el directorio de trabajo
-                eco_range = c(sf$threshlod,100), # asigna el umbral de dosel. el valor se lee de l tabla de atributos de cada pol'igono
-                change_vals = seq(22,23,1), # los anos de descarga (a partir de 2000. en este caso 2022 y 2023 con pasos de un ano)
-                binary_output = FALSE, # si es TRUE, produce mascaras binarias de bosque /no bosque, de lo contrario, deja el valor del umbarl para cada pixel
-                mc.cores = 5) # numero de nucleos para correr en paralelo. Solo aplica para sistemas Linux/MacOS
-
-
-
-#Ensamblar el mapa
-def. <- do.call(terra::mosaic, def_c)
-
-#establecer ruta
-pt <-'/media/mnt/harmonizacion_hansenIdeam/downloads' 
-
-#Exportar capas
-writeRaster(def., paste0(pt, '/', '2022_2023', '_arm.tif'))
-
