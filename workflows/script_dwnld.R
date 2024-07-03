@@ -108,28 +108,13 @@ if (!dir.exists(temp_dir)) {
 reference_info <- gdalUtilities::gdalinfo(ref, json = TRUE)
 reference_info <- fromJSON(reference_info)
 reference_crs <- reference_info$coordinateSystem$wkt
+# Extract pixel size from reference raster
+reference_pixel_size <- c(reference_info$geoTransform[2], -reference_info$geoTransform[6])
 
-#create temp dir. 
-dir.create(here('tmp'))
-temp_dir <- here('tmp')
-
-# Ensure the directory exists
-if (!dir.exists(temp_dir)) {
-  dir.create(temp_dir, recursive = TRUE)
-}
-
-# Define the paths
-reference_raster <- "path/to/reference.tif"
-input_files <- list.files("path/to/input_files", pattern = "\\.tif$", full.names = TRUE)
-output_files <- file.path("path/to/output_files", paste0("aligned_", basename(input_files)))
-
-
-# Parse reference_info
-reference_info <- fromJSON(gdalUtils::gdalinfo(reference_raster, json = TRUE))
-reference_crs <- reference_info$coordinateSystem$wkt
 
 # Function to process rasters
-process_raster <- function(input_file, output_file, reference_crs, temp_dir) {
+# Function to process rasters
+process_raster <- function(input_file, output_file, reference_crs, reference_pixel_size, temp_dir) {
   temp_file <- tempfile(tmpdir = temp_dir, fileext = ".tif")
   
   # Change data type and compress
@@ -139,8 +124,8 @@ process_raster <- function(input_file, output_file, reference_crs, temp_dir) {
   temp_aligned_file <- tempfile(tmpdir = temp_dir, fileext = ".tif")
   
   # Reproject and align
-  gdalUtilities::gdalwarp(srcfile = temp_file, dstfile = temp_aligned_file, t_srs = reference_crs, tr = c(30, 30),
-                          r = "near", tap = TRUE, overwrite = TRUE)
+  gdalUtilities::gdalwarp(srcfile = temp_file, dstfile = temp_aligned_file, t_srs = reference_crs, 
+                          tr = reference_pixel_size, r = "near", tap = TRUE, overwrite = TRUE)
   
   # Trim the raster
   r <- rast(temp_aligned_file)
@@ -152,9 +137,9 @@ process_raster <- function(input_file, output_file, reference_crs, temp_dir) {
   unlink(temp_aligned_file)
 }
 
-# Apply the function to all input files
+# Apply the function to all input filesk
 system.time({
-  Map(process_raster, infiles, outfiles, MoreArgs = list(reference_raster = ref, reference_crs = reference_crs))
+  Map(process_raster, input_files, output_files, MoreArgs = list(reference_crs = reference_crs, reference_pixel_size = reference_pixel_size, temp_dir = temp_dir))
 })
 
 
