@@ -163,15 +163,10 @@ system.time({
 infiles <- file.path(newdir, list.files(newdir, pattern = ".tif"))
 
 arm <- lapply(infiles, rast)
-
-
 arm2 <- do.call(terra::merge, arm)
 
-def.<- reduce(def_c, terra::merge)
 
-
-writeRaster(def., '/storage/home/TU/tug76452/harmonizacion_hansenIdeam/downloads/armonized_2223.tif')
-
+writeRaster(arm2, here(out_dir, 'arm_22_23.tif'))
 #######################SCRATCH####################################################################################
 def_c[1]
 

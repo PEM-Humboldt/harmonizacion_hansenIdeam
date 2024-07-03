@@ -1,8 +1,6 @@
 packs <- c('raster','rgdal','parallel','sense', 'R.utils', 'rvest','xml2','tidyverse', 'landscapemetrics', 'sf','dplyr','httr','getPass','gdalUtils','gdalUtilities','rgeos', 'viridis', 'rasterVis','rlang', 'rasterDT')
 sapply(packs, require, character.only = TRUE)
 
-install.packages("remotes")
-remotes::install_github("skiptoniam/sense")
 
 rm(list=ls())
 
@@ -14,16 +12,16 @@ m
 dir. <- "/Users/sputnik/Documents/bosque-nobosque/IDEAMfnf/outs"
 dir()
 
-#set list of if files to align
-tiffes <- list.files(dir., pattern = "rec")
-tiffes1 <- file.path(dir.,tiffes)
+#set list of files to reproject
+tiffes1 <- file.path(out_dir, list.files(out_dir, pattern = ".tif"))
 #create folder to store the new rasters 
-dir.create('outs')
-dir()
+dir.create(here('reproj'))
+
 
 #set path to the refernece file
 reference. <-"/Users/sputnik/Documents/bosque-nobosque/mask_colombia.tif"
 
+ref <- rast(reference.)
 
 tiffes2  <- file.path(dir.,'outs',tiffes)
 
