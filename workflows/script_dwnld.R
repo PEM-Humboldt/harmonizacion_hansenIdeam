@@ -4,7 +4,7 @@
 
                                         #Load Packages 
 packs <- c('terra', 'raster','purrr', 'landscapemetrics', 'sf','dplyr',
-           'rlang', 'rasterDT', 'ecochange', 'here', 'gdalUtilities')
+           'rlang', 'rasterDT', 'ecochange', 'here', 'gdalUtilities', 'jsonlite')
 
 # sapply(packs, install.packages, character.only = TRUE) #Install package if necessary
 sapply(packs, require, character.only = TRUE)
@@ -75,9 +75,6 @@ def1 <- lapply(def1, function(ls){
     })
 
 
-
-379-353
-
 #WriteRasters
 map(1:length(def1), function(x) writeRaster(def1[[x]], paste0(out_dir, '/',n, '_', x,'.tif')))#, progress=TRUE) 
 #################################################################
@@ -86,17 +83,93 @@ map(1:length(def1), function(x) writeRaster(def1[[x]], paste0(out_dir, '/',n, '_
 ## set target crs:
 cr.  <- "+proj=tmerc +lat_0=4.596200416666666 +lon_0=-74.07750791666666 +k=1 +x_0=1000000 +y_0=1000000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"  
 
-
-                                        #set list of files to reproject
-infiles <- file.path(out_dir, list.files(out_dir, pattern = ".tif"))
-
-                                        #create folder to store the new rasters 
+# Create directory to store the aligned rasters
 dir.create(here('reproj'))
 newdir <- here('reproj')
 
-                                        # set list of output paths
-
+#Define the paths
+## Set reference template to align
+ref <- here("reference", "mask_colombia.tif")
+## set path to downloaded  files
+infiles <- file.path(out_dir, list.files(out_dir, pattern = ".tif"))
+## set paths for output files  
 outfiles <- file.path(newdir, basename(infiles))
+
+#create temp dir. 
+dir.create(here('tmp'))
+temp_dir <- here('tmp')
+
+# Ensure the directory exists
+if (!dir.exists(temp_dir)) {
+  dir.create(temp_dir, recursive = TRUE)
+}
+
+# Get the CRS of the reference raster
+reference_info <- gdalUtilities::gdalinfo(ref, json = TRUE)
+reference_info <- fromJSON(reference_info)
+reference_crs <- reference_info$coordinateSystem$wkt
+
+#create temp dir. 
+dir.create(here('tmp'))
+temp_dir <- here('tmp')
+
+# Ensure the directory exists
+if (!dir.exists(temp_dir)) {
+  dir.create(temp_dir, recursive = TRUE)
+}
+
+# Define the paths
+reference_raster <- "path/to/reference.tif"
+input_files <- list.files("path/to/input_files", pattern = "\\.tif$", full.names = TRUE)
+output_files <- file.path("path/to/output_files", paste0("aligned_", basename(input_files)))
+
+
+# Parse reference_info
+reference_info <- fromJSON(gdalUtils::gdalinfo(reference_raster, json = TRUE))
+reference_crs <- reference_info$coordinateSystem$wkt
+
+# Function to process rasters
+process_raster <- function(input_file, output_file, reference_crs, temp_dir) {
+  temp_file <- tempfile(tmpdir = temp_dir, fileext = ".tif")
+  
+  # Change data type and compress
+  gdalUtilities::gdal_translate(src_dataset = input_file, dst_dataset = temp_file, of = "GTiff",
+                                co = c("COMPRESS=LZW", "TILED=YES", "PIXELTYPE=SIGNEDBYTE"))
+  
+  temp_aligned_file <- tempfile(tmpdir = temp_dir, fileext = ".tif")
+  
+  # Reproject and align
+  gdalUtilities::gdalwarp(srcfile = temp_file, dstfile = temp_aligned_file, t_srs = reference_crs, tr = c(30, 30),
+                          r = "near", tap = TRUE, overwrite = TRUE)
+  
+  # Trim the raster
+  r <- rast(temp_aligned_file)
+  r_trimmed <- trim(r)
+  writeRaster(r_trimmed, output_file, filetype = "GTiff", overwrite = TRUE, options = c("COMPRESS=LZW", "TILED=YES"))
+  
+  # Clean up temporary files
+  unlink(temp_file)
+  unlink(temp_aligned_file)
+}
+
+# Apply the function to all input files
+system.time({
+  Map(process_raster, infiles, outfiles, MoreArgs = list(reference_raster = ref, reference_crs = reference_crs))
+})
+
+
+
+
+system.time(
+  malr <- Map(function(x,y)
+    align_rasters(
+      unaligned=x,
+      reference=reference.,
+      dstfile=y,
+      nThreads=8,
+      verbose=TRUE),
+    infiles,outfiles)
+)
 
 
 
