@@ -1,6 +1,3 @@
-library(terra)
-library(gdalUtilities)
-library(purrr)
 
 #' Process each sublist of sf objects to download and save rasters
 #'
@@ -21,7 +18,7 @@ process_sublists <- function(biomat, output_dir, download_path, n_cores = 2) {
                   change_vals = seq(22, 23, 1), # years of data (2022 and 2023 with a step of one year)
                   binary_output = FALSE, # if TRUE, produces binary masks of forest/non-forest, otherwise keeps the canopy threshold for each pixel
                   mc.cores = n_cores) # number of cores for parallel processing
-    
+
     # Convert RasterLayer to SpatRaster
     convert_to_spatraster <- function(x) {
       if (inherits(x, "RasterLayer")) {
@@ -32,31 +29,31 @@ process_sublists <- function(biomat, output_dir, download_path, n_cores = 2) {
         return(x)
       }
     }
-    
+
     d <- lapply(d, function(ls) {
       lapply(ls, convert_to_spatraster)
     })
-    
+
     # Stack the bands
     d <- lapply(d, function(ls) {
       rast(ls)
     })
-    
+
     # Save the stacked raster
     map(1:length(d), function(x) writeRaster(d[[x]], paste0(output_file, '_', x, '.tif')))
   }
-  
+
   # Apply the function to each sublist
   for (i in seq_along(biomat)) {
     biomat_r <- biomat[[i]]
     message(paste("Processing sublist", i, "of", length(biomat)))
-    
+
     # Create output directory for the sublist
     sublist_output_dir <- file.path(output_dir, paste0("sublist_", i))
     if (!dir.exists(sublist_output_dir)) {
       dir.create(sublist_output_dir, recursive = TRUE)
     }
-    
+
     # Apply the process to each sf object in the sublist
     map(1:length(biomat_r), function(x) {
       sf_obj <- biomat_r[[x]]
@@ -67,13 +64,13 @@ process_sublists <- function(biomat, output_dir, download_path, n_cores = 2) {
 }
 
 # Example usage:
-path_biomes <- "path/to/biomes.shp"
-biomat <- load_preprocess_data(path_biomes)
-biomat <- split_list(biomat, 15)
+ path_biomes <- here('vector_data', 'biomes_thresholds.shp')
+ biomat <- load_preprocess_data(path_biomes)
+ #biomat <- split_list(biomat, 15)
 
 # Example parameters
 output_dir <- "path/to/output"
-download_path <- "/storage/home/TU/tug76452/harmonizacion_hansenIdeam/downloads"
+download_path <- here('downloads')
 n_cores <- 2
 
 process_sublists(biomat, output_dir, download_path, n_cores)

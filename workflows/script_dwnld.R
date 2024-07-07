@@ -29,7 +29,7 @@ split_list <- function(input_list, n) {
   split(input_list, rep(1:n, each = split_size, length.out = length(input_list)))
 }
 
-                                        # Split the list into 5 sublists
+                                        # Split the list into n sublists
 biomat <- split_list(biomat, 15)
 # Check Number of polyons/subset
 sapply(biomat, length)
