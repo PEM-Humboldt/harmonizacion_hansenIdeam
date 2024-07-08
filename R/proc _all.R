@@ -5,6 +5,10 @@
 #' @param output_dir The directory where the output rasters will be saved
 #' @param download_path The path where downloaded rasters will be stored
 #' @param n_cores Number of cores for parallel processing
+#' @importFrom ecochange echanges
+#' @importFrom terra rast
+#' @importFrom terra writeRaster
+#' @import here
 #' @return None
 #' @export
 process_sublists <- function(biomat, output_dir, download_path, n_cores = 2) {
