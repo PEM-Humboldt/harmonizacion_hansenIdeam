@@ -63,15 +63,4 @@ process_sublists <- function(biomat, output_dir, download_path, n_cores = 2) {
   }
 }
 
-# Example usage:
- path_biomes <- here('vector_data', 'biomes_thresholds.shp')
- biomat <- load_preprocess_data(path_biomes)
- #biomat <- split_list(biomat, 15)
-
-# Example parameters
-output_dir <- "path/to/output"
-download_path <- here('downloads')
-n_cores <- 2
-
-process_sublists(biomat, output_dir, download_path, n_cores)
 

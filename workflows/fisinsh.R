@@ -1,3 +1,4 @@
+# I think this is also not necessary anymore. The new process is way better, keep it as reference for them oment, then move to old versions before removing definitively
 library(tidyverse)
 library(raster)
 library(furrr)
@@ -20,7 +21,7 @@ options(future.globals.maxSize= mem_future)
 plan(multisession, workers=14)
 rasters <- future_map(1:length(rasters), function(x) merge(mskf, rasters[[x]]))
 
-future_map(10:length(rasters), function(x) writeRaster(rasters[[x]], paste(namer[x]), format='GTiff', overwrite=TRUE)) 
+future_map(10:length(rasters), function(x) writeRaster(rasters[[x]], paste(namer[x]), format='GTiff', overwrite=TRUE))
 listr <- list.files('.','masked')
 rasters <- list()
 for(i in 1:length(listr)){
@@ -33,4 +34,4 @@ r_2004 <- merge(mskf, r_2004)
 writeRaster(r_2004, 'mergedt_2004', format='GTiff')
 
 rasters <- future_map(1:length(rasters), function(x) raster::mask(rasters[[x]], msk))
-future_map(1:lenght(rasters), function(x) writeRaster(rasters[[x]], paste(namer[x], 'masked', sep='_'), format='GTiff', overwrite=TRUE)) 
+future_map(1:lenght(rasters), function(x) writeRaster(rasters[[x]], paste(namer[x], 'masked', sep='_'), format='GTiff', overwrite=TRUE))

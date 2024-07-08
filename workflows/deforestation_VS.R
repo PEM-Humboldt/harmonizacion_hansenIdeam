@@ -1,14 +1,14 @@
 # CALCULATING DEFORESTATION
 # AUTHOR: VICTORIA SARMIENTO
-# CREATED: Summer 2021-JAN 2022# 
-# UPDATED: JERONIMO RODRIGUEZ/ 2022 APRIL 
+# CREATED: Summer 2021-JAN 2022#
+# UPDATED: JERONIMO RODRIGUEZ/ 2022 APRIL
 # Note June 2024. This script needs a lot of optimization. It is likely that i can even drop it. Is just a change function
 
 #Necesary packages-------------------------------------------------------
 paks<-c('terra', 'rgdal','sp', 'tidyverse', 'furrr')
 sapply(packs, require, character.only = TRUE)
-        
-#This needs to be converted into using gdal or terra. Not raster anymore 
+
+#This needs to be converted into using gdal or terra. Not raster anymore
 
                                         # Setting working directory and temporary folder -----------------------------------------
 path=("/storage/home/TU/tug76452/biotablero/binary/Container_tmp")
@@ -16,7 +16,7 @@ setwd(path)
 #path=("/storage/home/TU/tug76452/biotablero/binary/outputs")
 #setwd(path)
 
-#Set temporary folder. Here it is key
+#Set temporary folder.
 dir.create('tempfiledir')
 tempdir=paste(getwd(),'tempfiledir', sep="/")
 rasterOptions(tmpdir=tempdir)
@@ -27,25 +27,22 @@ tiffs<-list.files('.', pattern='tif')
 
 tiffs <- tiffs[c(14:18)]
 
-#remove the last form list 1, and the first from list 2. This can be done way easier, but no time now, just keep this as pending
+#remove the last from list 1, and the first from list 2.
 r.list<-lapply(tiffs[-(length(tiffs)-1)], rast)
-
 
 r.list2<-list()
 for(i in 2:length(tiffs)){
   r.list2[i]<-raster(tiffs[i])
 }
 
-
 r.list2 <- r.list2[-1]
-#extrct bi annual forest loss
+#extract bi annual forest loss
  floss <-function(raso, rasi){
     def <- raso-rasi
     return(def)}
 
-
 reclv <- c(1:length(r.list))
-#Update the pixel vlaue by the forest loss year       
+#Update the pixel value by the forest loss year
 mult_one <- function(var1, var2)
 {
     def <- var1*var2
@@ -56,7 +53,7 @@ namer <- map(1:length(tiffs), function(x) substr(tiffs[x], 8,11))
 namer <- unlist(namer)
 namer <- namer[-1]
 
-path=("/storage/home/TU/tug76452/biotablero/binary/outputs")
+path=here("outputs")
 setwd(path)
 
 #2. Calculate Forest loss between years ------
@@ -67,7 +64,6 @@ deforest <-map(1:length(deforest), function(x) mult_one(deforest[[x]], reclv[x])
                                         # save rasters
 map(1:length(deforest), function(x) writeRaster(deforest[[x]], paste('def_2',namer[x], sep='_'), format='GTiff', overwrite=TRUE))
 
-    ############################### Pending: parallelize this. Not really urgen, don't know whetet i am goiing to use it again or not, but keep for 
-    #future reference 
+    ############################### Pending: parallelize this. Not really urgent, don't know wheter necessary but keep  for future reference
 
 
