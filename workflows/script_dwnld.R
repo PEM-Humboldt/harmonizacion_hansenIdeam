@@ -1,20 +1,27 @@
 
 # Hansen forest  Map Downloader Using the echanges() function from the ecochange R package (Lara et al., 2024)
 # for individual polygons using a canopy threshold provided as attribute
-                                        #Load Packages
+#Load Packages
 packs <- c('terra', 'raster','purrr', 'landscapemetrics', 'sf','dplyr',
-           'rlang', 'rasterDT', 'ecochange', 'here', 'gdalUtilities', 'jsonlite')
+           'rlang', 'rasterDT', 'ecochange', 'here', 'gdalUtilities', 'jsonlite', 'here')
 
 # sapply(packs, install.packages, character.only = TRUE) #Install package if necessary
 sapply(packs, require, character.only = TRUE)
 
-                                        #Define paths
+
+# create temporary directory for raster files.
+dir.create(here('tempfiledir'))
+tempdir=paste(here('tempfiledir'))
+rasterOptions(tmpdir=tempdir)
+
+
+#Define paths
 # input polygons
 path_biomes <- here('vector_data', 'biomes_thresholds.shp')
 # Set output directory
 out_dir <- here('downloads2')
 
-                                        #Load input data
+#Load input data
 masked <- st_read(path_biomes)
 #Remove biomes for which the threshold attribute is empty (NA)
 masked <- masked%>%subset(!is.na(agreement))
@@ -29,47 +36,58 @@ split_list <- function(input_list, n) {
   split(input_list, rep(1:n, each = split_size, length.out = length(input_list)))
 }
 
-                                        # Split the list into n sublists
+# Split the list into n sublists
 biomat <- split_list(biomat, 30)
+
+biomat <- biomat[-c(1:7)]
 # Check Number of polyons/subset
 sapply(biomat, length)
 
-                                        # Iterate over each subset
+# Example parameters
+chang_vals <- seq(22,23,1)
+output_dir <- here('downloads')
+download_path <- here('downloads2')
+n_cores <- 4
+
+process_sublists(biomat, output_dir, chang_vals, download_path)#, n_cores)
+
+
+# Iterate over each subset
 n <- 1
 biomat_r <- biomat[[n]]
 
 system.time(#def <- lapply(biomat, function(ls){
-def1 <- lapply(biomat_r,function(sf){
+  def1 <- lapply(biomat_r,function(sf){
     d <- echanges(sf,
-                lyrs = c('treecover2000','lossyear'), # a~no inicial y a~no de perdida
-                # path = '/media/mnt/harmonizacion_hansenIdeam/downloads', #directorio para domde se almacenan los datos descargados. si se deja getwd() se guardan en el directorio de trabajo
-                path = here('downloads2'),
-                eco_range = c(sf$threshold,100), # asigna el umbral de dosel. el valor se lee de l tabla de atributos de cada pol'igono
-                change_vals = seq(22,23,1), # los anos de descarga (a partir de 2000. en este caso 2022 y 2023 con pasos de un ano)
-                binary_output = FALSE, # si es TRUE, produce mascaras binarias de bosque /no bosque, de lo contrario, deja el valor del umbral para cada pixel
-                mc.cores = 4) # numero de nucleos para correr en paralelo. Solo aplica para sistemas Linux/MacOS
+                  lyrs = c('treecover2000','lossyear'), # a~no inicial y a~no de perdida
+                  # path = '/media/mnt/harmonizacion_hansenIdeam/downloads', #directorio para domde se almacenan los datos descargados. si se deja getwd() se guardan en el directorio de trabajo
+                  path = here('downloads2'),
+                  eco_range = c(sf$threshold,100), # asigna el umbral de dosel. el valor se lee de l tabla de atributos de cada pol'igono
+                  change_vals = seq(22,23,1), # los anos de descarga (a partir de 2000. en este caso 2022 y 2023 con pasos de un ano)
+                  binary_output = FALSE, # si es TRUE, produce mascaras binarias de bosque /no bosque, de lo contrario, deja el valor del umbral para cada pixel
+                  mc.cores = 4) # numero de nucleos para correr en paralelo. Solo aplica para sistemas Linux/MacOS
   })
 )
 
 # convert RasterLayer to SpatRaster
-  convert_to_spatraster <- function(x){
-    if (inherits(x, "RasterLayer")) {
-      return(terra::rast(x))
-    } else if (is.list(x)) {
-      return(lapply(x, convert_to_spatraster))
-    } else {
-      return(x)
-    }
+convert_to_spatraster <- function(x){
+  if (inherits(x, "RasterLayer")) {
+    return(terra::rast(x))
+  } else if (is.list(x)) {
+    return(lapply(x, convert_to_spatraster))
+  } else {
+    return(x)
   }
+}
 
 system.time(def1 <- lapply(def1,function(ls){
-    lapply(ls,convert_to_spatraster)
-    }))
+  lapply(ls,convert_to_spatraster)
+}))
 
 # Stack the bands
 def1 <- lapply(def1, function(ls){
-    r <- rast(ls)
-    })
+  r <- rast(ls)
+})
 
 #WriteRasters
 map(1:length(def1), function(x) writeRaster(def1[[x]], paste0(out_dir, '/',n, '_', x,'.tif')))
@@ -118,7 +136,7 @@ reference_crs <- reference_info$coordinateSystem$wkt
 # Extract pixel size from reference raster
 reference_pixel_size <- c(reference_info$geoTransform[2], -reference_info$geoTransform[6])
 
-                                        # Initialize a list to keep track of skipped files
+# Initialize a list to keep track of skipped files
 skipped_files <- list()
 
 # Function to postprocess rasters
@@ -134,18 +152,18 @@ process_raster <- function(input_file, output_file, reference_crs, reference_pix
   # Trim the raster
   r <- rast(temp_aligned_file)
   if (all(is.na(values(r)))) {
-      message(paste("Skipping raster with only NAs:", input_file))
-      skipped_files <<- c(skipped_files, input_file)
-      unlink(temp_file)
-      unlink(temp_aligned_file)
-      return(NULL)
-        }
+    message(paste("Skipping raster with only NAs:", input_file))
+    skipped_files <<- c(skipped_files, input_file)
+    unlink(temp_file)
+    unlink(temp_aligned_file)
+    return(NULL)
+  }
   r <- rast(temp_aligned_file)
   r_trimmed <- trim(r)
   temp_trimmed_file <- tempfile(tmpdir = temp_dir, fileext = ".tif")
   writeRaster(r_trimmed, temp_trimmed_file, filetype = "GTiff", overwrite = TRUE, datatype = "INT1U")
   gdalUtilities::gdal_translate(src_dataset = temp_trimmed_file, dst_dataset = output_file, of = "GTiff",
-                                                                 co = c("COMPRESS=LZW", "TILED=YES"))
+                                co = c("COMPRESS=LZW", "TILED=YES"))
   # Clean up temporary files
   unlink(temp_file)
   unlink(temp_aligned_file)

@@ -1,4 +1,4 @@
-#' Process each sublist of sf objects to download and save rasters
+' Process each sublist of sf objects to download and save rasters
 #'
 #' @param biomat A list of sublists of sf objects
 #' @param output_dir The directory where the output rasters will be saved
@@ -23,8 +23,8 @@ process_sublists <- function(biomat, output_dir, download_path, n_cores = 2) {
                   mc.cores = n_cores) # number of cores for parallel processing
 
     # Debugging: Print structure of d
-    print("Downloaded data structure (d):")
-    print(str(d))
+    # print("Downloaded data structure (d):")
+    # print(str(d))
 
     # Convert each RasterLayer to SpatRaster
     d <- lapply(d, function(x) {
@@ -36,15 +36,15 @@ process_sublists <- function(biomat, output_dir, download_path, n_cores = 2) {
     })
 
     # Debugging: Print structure after conversion
-    print("Structure after conversion to SpatRaster:")
-    print(str(d))
+    # print("Structure after conversion to SpatRaster:")
+    # print(str(d))
 
     # Stack the bands
     r <- rast(d)
 
     # Debugging: Print structure after stacking
-    print("Structure after stacking bands:")
-    print(str(r))
+    # print("Structure after stacking bands:")
+    # print(str(r))
 
     # Save the stacked raster
     writeRaster(r, paste0(output_file, '.tif'), overwrite = TRUE)
