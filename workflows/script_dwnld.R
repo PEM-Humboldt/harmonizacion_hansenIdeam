@@ -39,7 +39,6 @@ split_list <- function(input_list, n) {
 # Split the list into n sublists
 biomat <- split_list(biomat, 30)
 
-biomat <- biomat[-c(1:7)]
 # Check Number of polyons/subset
 sapply(biomat, length)
 
@@ -49,62 +48,9 @@ output_dir <- here('downloads')
 download_path <- here('downloads2')
 n_cores <- 4
 
-process_sublists(biomat, output_dir, chang_vals, download_path)#, n_cores)
-
-
-# Iterate over each subset
-n <- 1
-biomat_r <- biomat[[n]]
-
-system.time(#def <- lapply(biomat, function(ls){
-  def1 <- lapply(biomat_r,function(sf){
-    d <- echanges(sf,
-                  lyrs = c('treecover2000','lossyear'), # a~no inicial y a~no de perdida
-                  # path = '/media/mnt/harmonizacion_hansenIdeam/downloads', #directorio para domde se almacenan los datos descargados. si se deja getwd() se guardan en el directorio de trabajo
-                  path = here('downloads2'),
-                  eco_range = c(sf$threshold,100), # asigna el umbral de dosel. el valor se lee de l tabla de atributos de cada pol'igono
-                  change_vals = seq(22,23,1), # los anos de descarga (a partir de 2000. en este caso 2022 y 2023 con pasos de un ano)
-                  binary_output = FALSE, # si es TRUE, produce mascaras binarias de bosque /no bosque, de lo contrario, deja el valor del umbral para cada pixel
-                  mc.cores = 4) # numero de nucleos para correr en paralelo. Solo aplica para sistemas Linux/MacOS
-  })
-)
-
-# convert RasterLayer to SpatRaster
-convert_to_spatraster <- function(x){
-  if (inherits(x, "RasterLayer")) {
-    return(terra::rast(x))
-  } else if (is.list(x)) {
-    return(lapply(x, convert_to_spatraster))
-  } else {
-    return(x)
-  }
-}
-
-system.time(def1 <- lapply(def1,function(ls){
-  lapply(ls,convert_to_spatraster)
-}))
-
-# Stack the bands
-def1 <- lapply(def1, function(ls){
-  r <- rast(ls)
-})
-
-#WriteRasters
-map(1:length(def1), function(x) writeRaster(def1[[x]], paste0(out_dir, '/',n, '_', x,'.tif')))
-#################################################################
-
-########################################################################################################
-# Example usage:
-path_biomes <- here('vector_data', 'biomes_thresholds.shp')
-biomat <- load_preprocess_data(path_biomes)
-biomat <- split_list(biomat, 30)
-
-# Example parameters
-output_dir <- here('downloads2')
-download_path <- here('downloads2')
-n_cores <- 4
-
 process_sublists(biomat, output_dir, download_path, n_cores)
+
+
 ########################################################################################################
 
 
