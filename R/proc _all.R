@@ -1,4 +1,3 @@
-
 #' Process each sublist of sf objects to download and save rasters
 #'
 #' @param biomat A list of sublists of sf objects
@@ -23,28 +22,32 @@ process_sublists <- function(biomat, output_dir, download_path, n_cores = 2) {
                   binary_output = FALSE, # if TRUE, produces binary masks of forest/non-forest, otherwise keeps the canopy threshold for each pixel
                   mc.cores = n_cores) # number of cores for parallel processing
 
-    # Convert RasterLayer to SpatRaster
-    convert_to_spatraster <- function(x) {
+    # Debugging: Print structure of d
+    print("Downloaded data structure (d):")
+    print(str(d))
+
+    # Convert each RasterLayer to SpatRaster
+    d <- lapply(d, function(x) {
       if (inherits(x, "RasterLayer")) {
         return(terra::rast(x))
-      } else if (is.list(x)) {
-        return(lapply(x, convert_to_spatraster))
       } else {
-        return(x)
+        stop("Expected a RasterLayer")
       }
-    }
-
-    d <- lapply(d, function(ls) {
-      lapply(ls, convert_to_spatraster)
     })
+
+    # Debugging: Print structure after conversion
+    print("Structure after conversion to SpatRaster:")
+    print(str(d))
 
     # Stack the bands
-    d <- lapply(d, function(ls) {
-      rast(ls)
-    })
+    r <- rast(d)
+
+    # Debugging: Print structure after stacking
+    print("Structure after stacking bands:")
+    print(str(r))
 
     # Save the stacked raster
-    map(1:length(d), function(x) writeRaster(d[[x]], paste0(output_file, '_', x, '.tif')))
+    writeRaster(r, paste0(output_file, '.tif'), overwrite = TRUE)
   }
 
   # Apply the function to each sublist
@@ -66,5 +69,3 @@ process_sublists <- function(biomat, output_dir, download_path, n_cores = 2) {
     })
   }
 }
-
-

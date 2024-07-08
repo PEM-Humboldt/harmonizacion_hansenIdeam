@@ -82,8 +82,8 @@ biomat <- load_preprocess_data(path_biomes)
 biomat <- split_list(biomat, 30)
 
 # Example parameters
-output_dir <- here('reproj')
-download_path <- here('downloads')
+output_dir <- here('downloads2')
+download_path <- here('downloads2')
 n_cores <- 4
 
 process_sublists(biomat, output_dir, download_path, n_cores)
