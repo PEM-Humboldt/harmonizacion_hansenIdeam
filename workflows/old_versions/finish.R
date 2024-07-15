@@ -1,4 +1,4 @@
-# I think this is also not necessary anymore. The new process is way better, keep it as reference for them oment, then move to old versions before removing definitively
+# I think this is also not necessary anymore. The new process is way better, keep it as reference for the moment, then move to old versions before removing definitively
 library(tidyverse)
 library(raster)
 library(furrr)

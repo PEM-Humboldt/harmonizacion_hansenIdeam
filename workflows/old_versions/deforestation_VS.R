@@ -2,7 +2,7 @@
 # AUTHOR: VICTORIA SARMIENTO
 # CREATED: Summer 2021-JAN 2022#
 # UPDATED: JERONIMO RODRIGUEZ/ 2022 APRIL
-# Note June 2024. This script needs a lot of optimization. It is likely that i can even drop it. Is just a change function
+# Note June 2024. This script can be optimized. Is just a change function
 
 #Necesary packages-------------------------------------------------------
 paks<-c('terra', 'rgdal','sp', 'tidyverse', 'furrr')

@@ -29,17 +29,17 @@ masked <- masked%>%subset(!is.na(agreement))
 biomat <- masked%>%split(.$biome)
 
 # Function to split a list into n equal parts (deals with memory limitations distributing the work load into smaller sets)
-split_list <- function(input_list, n) {
-  # Calculate the number of elements in each sublist
-  split_size <- ceiling(length(input_list) / n)
-  # Split the list into sublists
-  split(input_list, rep(1:n, each = split_size, length.out = length(input_list)))
-}
+# split_list <- function(input_list, n) {
+#   # Calculate the number of elements in each sublist
+#   split_size <- ceiling(length(input_list) / n)
+#   # Split the list into sublists
+#   split(input_list, rep(1:n, each = split_size, length.out = length(input_list)))
+# }
 
 # Split the list into n sublists
 biomat <- split_list(biomat, 30)
 
-# Check Number of polyons/subset
+# Check the number of polygons in each sublist
 sapply(biomat, length)
 
 # Example parameters
