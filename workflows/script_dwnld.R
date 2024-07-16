@@ -19,7 +19,7 @@ rasterOptions(tmpdir=tempdir)
 # input polygons
 path_biomes <- here('vector_data', 'biomes_thresholds.shp')
 # Set output directory
-out_dir <- here('downloads2')
+out_dir <- dir.create(here('downloads'))
 
 #Load input data
 masked <- st_read(path_biomes)
@@ -27,14 +27,6 @@ masked <- st_read(path_biomes)
 masked <- masked%>%subset(!is.na(agreement))
 #Split the vector into a list of individual polygons
 biomat <- masked%>%split(.$biome)
-
-# Function to split a list into n equal parts (deals with memory limitations distributing the work load into smaller sets)
-# split_list <- function(input_list, n) {
-#   # Calculate the number of elements in each sublist
-#   split_size <- ceiling(length(input_list) / n)
-#   # Split the list into sublists
-#   split(input_list, rep(1:n, each = split_size, length.out = length(input_list)))
-# }
 
 # Split the list into n sublists
 biomat <- split_list(biomat, 30)
@@ -45,8 +37,9 @@ sapply(biomat, length)
 # Example parameters
 chang_vals <- seq(22,23,1)
 output_dir <- here('downloads')
-download_path <- here('downloads2')
+download_path <- here('downloads')
 n_cores <- 4
+
 
 process_sublists(biomat, output_dir, download_path, n_cores)
 
@@ -57,11 +50,9 @@ process_sublists(biomat, output_dir, download_path, n_cores)
 # Create directory to store the aligned rasters
 #dir.create(here('reproj'))
 newdir <- here('reproj')
-
 #Define the paths
 ## Set reference template to align
 ref <- here("reference", "mask_colombia.tif")
-
 ## set path to downloaded  files
 infiles <- file.path(out_dir, list.files(out_dir, pattern = ".tif"))
 ## set paths for output files
@@ -69,7 +60,6 @@ outfiles <- file.path(newdir, basename(infiles))
 
 #create temp dir.
 temp_dir <- here('tmp')
-
 # Ensure the directory exists
 if (!dir.exists(temp_dir)) {
   dir.create(temp_dir, recursive = TRUE)

@@ -4,6 +4,7 @@
 #' @param output_dir The directory where the output rasters will be saved
 #' @param download_path The path where downloaded rasters will be stored
 #' @param change_vals A sequence of years for which data will be downloaded
+#' @param bn_output A logical value. Wether the forest maps should be downloaded as canopy cover percentage (FALSE) or as Binary maps. Default is FALSE.
 #' @param n_cores Number of cores for parallel processing
 #' @importFrom ecochange echanges
 #' @importFrom terra rast
@@ -12,7 +13,7 @@
 #' @return None
 #' @export
 #' @author Jeronimo Rodriguez-Escobar <jeronimo.rescobar@gmail.com>
-process_sublists <- function(biomat, output_dir, download_path, change_vals = seq(22, 23, 1), n_cores = 2) {
+process_sublists <- function(biomat, output_dir, download_path, change_vals = seq(22, 23, 1), bin_output =FALSE, n_cores = 2) {
   # Function to process each sf object and download rasters
   process_raster <- function(sf_obj, output_file) {
     # Download the raster data
@@ -21,7 +22,7 @@ process_sublists <- function(biomat, output_dir, download_path, change_vals = se
                   path = download_path, # directory to store downloaded data
                   eco_range = c(sf_obj$threshold, 100), # canopy cover threshold
                   change_vals = change_vals, # years of data
-                  binary_output = FALSE, # if TRUE, produces binary masks of forest/non-forest, otherwise keeps the canopy threshold for each pixel
+                  binary_output = bin_output, # if TRUE, produces binary masks of forest/non-forest, otherwise keeps the canopy threshold for each pixel
                   mc.cores = n_cores) # number of cores for parallel processing
 
     # Convert each RasterLayer to SpatRaster
