@@ -122,7 +122,7 @@ names(all_rasters) <- NULL
 final_raster <- do.call(terra::merge, all_rasters)
 
 # Save the final raster
-final_output_path <- file.path(newdir, "armonized_22_23.tif")
+final_output_path <- file.path(here('downloads'), "armonized_22_23.tif")
 writeRaster(final_raster, final_output_path, filetype = "GTiff", overwrite = TRUE, datatype = "INT1U")
 
 message("Processing complete.")
