@@ -1,5 +1,6 @@
 
-# Hansen forest  Map Downloader Using the echanges() function from the ecochange R package (Lara et al., 2024)
+# Hansen forest  Map Downloader Using the echanges() function from the ecochange R package 
+# (Lara et al., 2024)
 # for individual polygons using a canopy threshold provided as attribute
 
 #################################################################################################
