@@ -10,6 +10,7 @@ Authors@R:
             email = "victorhugo@temple.edu", 
             role = "ctb",
             comment = c(ORCID = "0000-0003-1338-2020")))
+
 Description: Set of tools to extract agreement metrics between different forest cover datasets, extract highest agreement levels and systematically download and assemble yearly harmonized forest cover maps for the coutry of Colombia.
 License: LGPL (>= 3)
 Encoding: UTF-8
