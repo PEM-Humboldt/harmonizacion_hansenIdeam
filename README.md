@@ -1,5 +1,5 @@
 
-# Homologation of Global and National Forest Cover Products
+# Harmonization of Global and National Forest Cover Products
 
 **A goal of large-area land cover mapping is to produce globally
 consistent characterizations that have local relevance and utility; that
@@ -37,8 +37,8 @@ devtools::install_github("RSENSUS/harmonizacion_hansenIdeam")
 ### Specific:
 
 1.  Fill spatial and temporal gaps in national forest coverage
-    reporting, but homogenized to the national standards (policy) Reduce
-    costs and increase speed in obtaining new data.
+    reporting, but homogenized to the national standards. Reduce costs
+    and improve update frequency .
 
 2.  Use local experience and locally produced datasets as validation
     data.
