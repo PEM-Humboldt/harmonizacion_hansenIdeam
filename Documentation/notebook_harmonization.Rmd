@@ -102,10 +102,8 @@ library(gridExtra)
 library(sf)
 library(ggplot2)
 
-mun <- st_read('/Users/sputnik/Library/CloudStorage/OneDrive-TempleUniversity/Research_Sommer_2023/harmonization_23/test_new/test_biomes.shp')
-
+mun <- st_read(here('test_data', 'test_biomes.shp'))
 mun <- split(mun, seq(nrow(mun)))
-
 sf_list <- lapply(mun, st_as_sf)
 
 # Create a list to store the plots
@@ -119,7 +117,6 @@ for (i in seq_along(sf_list)) {
     theme_minimal()
   plot_list[[i]] <- p
 }
-
 # Arrange the plots in a 3x2 grid
 grid.arrange(grobs = plot_list, ncol = 2, nrow = 3)
 
@@ -131,7 +128,7 @@ library(stringi)
 library(terra)
 library(dplyr)
 #load biomes map
-mun <- vect(paste0(dir, 'test_new/test_biomes.shp'))
+mun <- vect(here('test_data', 'test_biomes.shp'))
 #Get list of biomes names. Remove spaces and tildes (optional)
 nam <- mun[[1]] %>%
   unlist() %>%

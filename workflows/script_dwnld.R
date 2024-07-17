@@ -1,151 +1,128 @@
- 
-# Hansen forest  Map Downloader Using the echanges() function from the ecochange R package (Lara et al., 2024) 
-# for individual polygons using a canopy threshold provided as attribute
-                                        #Load Packages 
-packs <- c('terra', 'raster','purrr', 'landscapemetrics', 'sf','dplyr',
-           'rlang', 'rasterDT', 'ecochange', 'here', 'gdalUtilities', 'jsonlite')
 
+# Hansen forest  Map Downloader Using the echanges() function from the ecochange R package (Lara et al., 2024)
+# for individual polygons using a canopy threshold provided as attribute
+
+#################################################################################################
+# 1. PREPARE ENVIRONMENT
+#Load Packages
+packs <- c('terra', 'raster','purrr', 'landscapemetrics', 'sf','dplyr',
+           'rlang', 'rasterDT', 'ecochange', 'here', 'gdalUtilities', 'jsonlite', 'here')
 # sapply(packs, install.packages, character.only = TRUE) #Install package if necessary
 sapply(packs, require, character.only = TRUE)
 
-                                        #Define paths
+
+# create temporary directory to process raster files.
+dir.create(here('tempfiledir'))
+tempdir=paste(here('tempfiledir'))
+rasterOptions(tmpdir=tempdir)
+#set directory to store the downloaded data
+dir.create(here('downloads'))
+output_dir <- here('downloads')
+download_path <- here('downloads')
+
+
+#################################################################################################
+# 2. PREPARE INPUT VECTOR DATA
+#Define paths
 # input polygons
 path_biomes <- here('vector_data', 'biomes_thresholds.shp')
 # Set output directory
-out_dir <- here('downloads')
+out_dir <- dir.create(here('downloads'))
 
-                                        #Load input data
+#Load input data
 masked <- st_read(path_biomes)
 #Remove biomes for which the threshold attribute is empty (NA)
 masked <- masked%>%subset(!is.na(agreement))
+
 #Split the vector into a list of individual polygons
 biomat <- masked%>%split(.$biome)
 
-# Function to split a list into n equal parts (deals with memory limitations distributing the work load into smaller sets)
-split_list <- function(input_list, n) {
-  # Calculate the number of elements in each sublist
-  split_size <- ceiling(length(input_list) / n)  
-  # Split the list into sublists
-  split(input_list, rep(1:n, each = split_size, length.out = length(input_list)))
-}
+# Split the list into n sublists
+biomat <- split_list(biomat, 30)
 
-                                        # Split the list into 5 sublists
-biomat <- split_list(biomat, 15)
-# Check Number of polyons/subset
+# Check the number of polygons in each sublist
 sapply(biomat, length)
 
-                                        # Iterate over each subset (pending to fix) 
-n <- 8
-biomat_r <- biomat[[n]]
 
-system.time(#def <- lapply(biomat, function(ls){
-def1 <- lapply(biomat_r,function(sf){
-    d <- echanges(sf,
-                lyrs = c('treecover2000','lossyear'), # a~no inicial y a~no de perdida
-                # path = '/media/mnt/harmonizacion_hansenIdeam/downloads', #directorio para domde se almacenan los datos descargados. si se deja getwd() se guardan en el directorio de trabajo
-                path = '/storage/home/TU/tug76452/harmonizacion_hansenIdeam/downloads',
-                eco_range = c(sf$threshold,100), # asigna el umbral de dosel. el valor se lee de l tabla de atributos de cada pol'igono
-                change_vals = seq(22,23,1), # los anos de descarga (a partir de 2000. en este caso 2022 y 2023 con pasos de un ano)
-                binary_output = FALSE, # si es TRUE, produce mascaras binarias de bosque /no bosque, de lo contrario, deja el valor del umbarl para cada pixel
-                mc.cores = 2) # numero de nucleos para correr en paralelo. Solo aplica para sistemas Linux/MacOS
-  })
-)
+ # Set target years
+chang_vals <- seq(22,23,1)
+n_cores <- 4
 
-# convert RasterLayer to SpatRaster
-  convert_to_spatraster <- function(x){
-    if (inherits(x, "RasterLayer")) {
-      return(terra::rast(x))
-    } else if (is.list(x)) {
-      return(lapply(x, convert_to_spatraster))
-    } else {
-      return(x)
-    }
-  }
+#################################################################################################################
+#################################################################################################################
+# 3. Use iterate the ecochange::echanges function to obtain forests maps with the assigned threshold for each biome
+process_sublists(biomat, output_dir, download_path, change_vals = chang_vals, bin_output =FALSE, n_cores=4)
 
-system.time(def1 <- lapply(def1,function(ls){
-    lapply(ls,convert_to_spatraster)
-    }))
+########################################################################################################
+########################################################################################################
+# 4. Reproject and align the Downloaded data
 
-# Stack the bands
-def1 <- lapply(def1, function(ls){
-    r <- rast(ls)
-    })
-
-#WriteRasters
-map(1:length(def1), function(x) writeRaster(def1[[x]], paste0(out_dir, '/',n, '_', x,'.tif')))
-#################################################################
-
-# Create directory to store the aligned rasters
-#dir.create(here('reproj'))
+# Set Directories and paths
+dir.create(here('reproj'))
 newdir <- here('reproj')
-
-#Define the paths
-## Set reference template to align
+#set reference raster
 ref <- here("reference", "mask_colombia.tif")
-## set path to downloaded  files
-infiles <- file.path(out_dir, list.files(out_dir, pattern = ".tif"))
-## set paths for output files  
-outfiles <- file.path(newdir, basename(infiles))
-
-#create temp dir. 
+out_dir <- here("downloads")
 temp_dir <- here('tmp')
 
-# Ensure the directory exists
+# Ensure the temp directory exists
 if (!dir.exists(temp_dir)) {
   dir.create(temp_dir, recursive = TRUE)
 }
 
-# Get the CRS of the reference raster
+# Get the CRS and pixel size of the reference raster
 reference_info <- gdalUtilities::gdalinfo(ref, json = TRUE)
+
+# Replace "nan" with "null" to make the JSON valid
+reference_info <- gsub("nan", "null", reference_info)
+
+# Convert JSON string to R list
 reference_info <- fromJSON(reference_info)
+
+# Extract CRS and pixel size
 reference_crs <- reference_info$coordinateSystem$wkt
-# Extract pixel size from reference raster
 reference_pixel_size <- c(reference_info$geoTransform[2], -reference_info$geoTransform[6])
 
-                                        # Initialize a list to keep track of skipped files
+# Initialize a list to keep track of skipped files
 skipped_files <- list()
 
-# Function to postprocess rasters
-process_raster <- function(input_file, output_file, reference_crs, reference_pixel_size, temp_dir) {
-  temp_file <- tempfile(tmpdir = temp_dir, fileext = ".tif")
-  # Change data type and compress
-  gdalUtilities::gdal_translate(src_dataset = input_file, dst_dataset = temp_file, of = "GTiff",
-                                co = c("COMPRESS=LZW", "TILED=YES", "PIXELTYPE=SIGNEDBYTE"))
-  temp_aligned_file <- tempfile(tmpdir = temp_dir, fileext = ".tif")
-  # Reproject and align
-  gdalUtilities::gdalwarp(srcfile = temp_file, dstfile = temp_aligned_file, t_srs = reference_crs, 
-                          tr = reference_pixel_size, r = "near", tap = TRUE, overwrite = TRUE)
-  # Trim the raster
-  r <- rast(temp_aligned_file)
-  if (all(is.na(values(r)))) {
-      message(paste("Skipping raster with only NAs:", input_file))
-      skipped_files <<- c(skipped_files, input_file)
-      unlink(temp_file)
-      unlink(temp_aligned_file)
-      return(NULL)
-        }
-  r <- rast(temp_aligned_file)
-  r_trimmed <- trim(r)
-  temp_trimmed_file <- tempfile(tmpdir = temp_dir, fileext = ".tif")
-  writeRaster(r_trimmed, temp_trimmed_file, filetype = "GTiff", overwrite = TRUE, datatype = "INT1U")
-  gdalUtilities::gdal_translate(src_dataset = temp_trimmed_file, dst_dataset = output_file, of = "GTiff",
-                                                                 co = c("COMPRESS=LZW", "TILED=YES"))
-  # Clean up temporary files
-  unlink(temp_file)
-  unlink(temp_aligned_file)
-  unlink(temp_trimmed_file)
+# create list of subdirectories to iterate over
+sublist_dirs <- list.dirs(out_dir, full.names = TRUE, recursive = FALSE)
+
+# Initialize a list to sotre the processed rasters.
+all_rasters <- list()
+
+# Iterate the postprocessing function over all the sublists
+
+for (sublist_dir in sublist_dirs) {
+  message(paste("Processing sublist:", sublist_dir))
+
+  infiles <- file.path(sublist_dir, list.files(sublist_dir, pattern = ".tif"))
+  outfiles <- file.path(newdir, basename(infiles))
+
+  # Process each file in the sublist
+  system.time({
+    Map(post_process, infiles, outfiles, MoreArgs = list(reference_crs = reference_crs, reference_pixel_size = reference_pixel_size, temp_dir = temp_dir, resampling_method = "bilinear"))
+  })
+  # Load processed rasters
+  processed_files <- file.path(newdir, list.files(newdir, pattern = ".tif"))
+  sublist_rasters <- lapply(processed_files, rast)
+  # Merge rasters in the current sublist
+  sublist_merged <- do.call(terra::merge, sublist_rasters)
+  # Store the merged raster of the current sublist
+  all_rasters[[sublist_dir]] <- sublist_merged
+  # Clean up the newdir for the next sublist processing
+  file.remove(processed_files)
 }
 
-# Apply the function to all input files
-system.time({
-  Map(process_raster, infiles, outfiles, MoreArgs = list(reference_crs = reference_crs, reference_pixel_size = reference_pixel_size, temp_dir = temp_dir))
-})
+# Remove names from the list
+names(all_rasters) <- NULL
 
-##############################################################
-infiles <- file.path(newdir, list.files(newdir, pattern = ".tif"))
+# Now, merge the rasters
+final_raster <- do.call(terra::merge, all_rasters)
 
-arm <- lapply(infiles, rast)
-arm2 <- do.call(terra::merge, arm)
+# Save the final raster
+final_output_path <- file.path(here('downloads'), "armonized_22_23.tif")
+writeRaster(final_raster, final_output_path, filetype = "GTiff", overwrite = TRUE, datatype = "INT1U")
 
-writeRaster(arm2, here(out_dir, 'arm_22_23.tif'))
-#######################SCRATCH####################################################################################
+message("Processing complete.")

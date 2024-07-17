@@ -9,8 +9,10 @@ QGIS_files/final_mapasbosques.qgz
 QGIS_files/final_mapasbosques_AGU.qgz
 vector_data/
 downloads/
+downloads2/
 .DS_Store
 reference/
 tmp/
 reproj/
 ._.DS_Store
+tempfiledir/
