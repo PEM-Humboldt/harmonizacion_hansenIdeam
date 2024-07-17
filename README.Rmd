@@ -2,8 +2,16 @@
 
 **A goal of large-area land cover mapping is to produce globally consistent characterizations that have local relevance and utility; that is, reliable information across scales.** (Hansen et al 2013)
 
-This is the base for a package to obtain forest cover maps from the Global Forest Cover dataset by Hansen et al (2013) and run a pixelwise comparison with Colombian Forest Cover Datasets produced by the **Forests and Carbon Monitoring System - SMBYC** at the National Institute for Meteorology and Environmental Studies (IDEAM).
+This package allows to obtain yearly forest cover maps from the Global Forest Cover dataset by Hansen et al (2013) and run a pixelwise comparison with Colombian Forest Cover Datasets produced by the **Forests and Carbon Monitoring System - SMBYC** at the National Institute for Meteorology and Environmental Studies (IDEAM).
 
+## Installation
+
+You can install the development version of LCoverFlow from [GitHub](https://github.com/) with:
+
+``` r
+# install.packages("devtools")
+devtools::install_github("RSENSUS/harmonizacion_hansenIdeam")
+```
 # Introduction
 
 ## Objectives
