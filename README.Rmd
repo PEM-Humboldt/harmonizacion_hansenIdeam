@@ -82,14 +82,18 @@ The optimized canopy cover threshold for each biome are then used to obtain year
 
 ## Funding 
 
-This work was supported by The National Aeronautics and Space Administration -NASA Award 80NSSC18K0339.
+This work was supported by [The National Aeronautics and Space Administration - NASA](https://cce.nasa.gov/cce/about.htm?), [Award 80NSSC18K0339](https://cce.nasa.gov/cgi-bin/cce/cce_awards.pl?projType=project&progID=1&projID=3863).
 
-
-## References
 
 ### Publications:
 Lara, W., Londoño, M.C., Gonzalez, I. and Gutierrez‐Velez, V.H., 2022. ecochange: An R‐package to derive ecosystem change indicators from freely available earth observation products. Methods in Ecology and Evolution, 13(11), pp.2379-2388.
 
-**Gutierrez-Velez VH**, Rodriguez-Escobar J†, Mejía A†, Espejo J, Anaya JA, Blair, ME. Under review. Mapping forest cover and change as continuous variables is essential to advance consistency across forest monitoring products. 
+**Gutierrez-Velez VH**, Rodriguez-Escobar J, Mejía A†, Espejo J, Anaya JA, Blair, ME. Under review. Mapping forest cover and change as continuous variables is essential to advance consistency across forest monitoring products. 
+
+### References
+
+Hansen, M. C., Potapov, P. V., Moore, R., Hancher, M., Turubanova, S. A., Tyukavina, A., Thau, D., Stehman, S. V., Goetz, S. J., Loveland, T. R., Kommareddy, A., Egorov, A., Chini, L., Justice, C. O., & Townshend, J. R. G. (2013). High-Resolution Global Maps of 21st-Century Forest Cover Change. Science, 342(6160), 850–853. https://doi.org/10.1126/science.1244693
+
+Galindo, G., Espejo, O. J., Ramírez, J. P., Forero, C., Valbuena, C. A., Rubiano, J. C., Lozano, R. H., Vargas, K. M., Palacios, A., Palacios, S., Franco, C. A., Granados, E. I., Vergara, L. K., & Cabrera, E. (2014). Memoria Técnica. Cuantificación de la Superficie de Bosque Natural y Deforestación a Nivel Nacional Actualización Periodo 2012 – 2013 [Technical Report]. IDEAM.
 
 
