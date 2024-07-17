@@ -6,10 +6,11 @@
 # 1. PREPARE ENVIRONMENT
 #Load Packages
 packs <- c('terra', 'raster','purrr', 'landscapemetrics', 'sf','dplyr',
-           'rlang', 'rasterDT', 'ecochange', 'here', 'gdalUtilities', 'jsonlite', 'here')
+           'rlang', 'rasterDT', 'ecochange', 'here', 'gdalUtilities', 'jsonlite', 'here', 'devtools')
 # sapply(packs, install.packages, character.only = TRUE) #Install package if necessary
 sapply(packs, require, character.only = TRUE)
 
+load_all()
 
 # create temporary directory to process raster files.
 dir.create(here('tempfiledir'))
