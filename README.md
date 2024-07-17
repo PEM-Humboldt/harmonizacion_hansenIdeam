@@ -1,14 +1,25 @@
+
 # Homologation of Global and National Forest Cover Products
 
 **A goal of large-area land cover mapping is to produce globally
 consistent characterizations that have local relevance and utility; that
 is, reliable information across scales.** (Hansen et al 2013)
 
-This is the base for a package to obtain forest cover maps from the
-Global Forest Cover dataset by Hansen et al (2013) and run a pixelwise
+This package allows to obtain yearly forest cover maps from the Global
+Forest Cover dataset by Hansen et al (2013) and run a pixelwise
 comparison with Colombian Forest Cover Datasets produced by the
 **Forests and Carbon Monitoring System - SMBYC** at the National
 Institute for Meteorology and Environmental Studies (IDEAM).
+
+## Installation
+
+You can install the development version of LCoverFlow from
+[GitHub](https://github.com/) with:
+
+``` r
+# install.packages("devtools")
+devtools::install_github("RSENSUS/harmonizacion_hansenIdeam")
+```
 
 # Introduction
 
@@ -25,28 +36,28 @@ Institute for Meteorology and Environmental Studies (IDEAM).
 
 ### Specific:
 
-Fill spatial and temporal gaps in national forest coverage reporting,
-but homogenized to the national standards (policy) Reduce costs and
-increase speed in obtaining new data.
+1.  Fill spatial and temporal gaps in national forest coverage
+    reporting, but homogenized to the national standards (policy) Reduce
+    costs and increase speed in obtaining new data.
 
-Use local experience and datasets as validation datasets.
+2.  Use local experience and locally produced datasets as validation
+    data.
 
-Identify assess over/sub register of forest coverage/forest loss in the
-national dataset.
+3.  Identify assess over/sub register of forest coverage/forest loss in
+    the national and global datasets.
 
 ## Study Area
 
 Continental extent of Colombia, divided in 379 spatial units (biomes).
-(Londoño et al, 2017) )  
-\## Biomes Map
+(Londoño et al, 2017)
 
-## GLAD Forest Cover Data
+## IDEAM Forest Cover Data
 
 National data on forest cover and change for Colombia (IDEAM) The Forest
-and Carbon Monitoring System (Sistema de Monitoreo de Bosques y Carbono)
-ascribed to IDEAM in Colombia (Table 1) produces the official datasets
-on forest cover and change for the country and is the reference for
-national and regional policy (DNP, 2020) and to fulfill Colombia’s
+and Carbon Monitoring System (*Sistema de Monitoreo de Bosques y
+Carbono*) ascribed to IDEAM in Colombia (Table 1) produces the official
+datasets on forest cover and change for the country and is the reference
+for national and regional policy (DNP, 2020) and to fulfill Colombia’s
 international reporting obligations (IDEAM, 2019). The forest cover
 product represents forest presence in areas where vegetation meets the
 national definition of forests (Table 2). This dataset explicitly
@@ -72,7 +83,7 @@ we used V5, for 2013-2014 we used V6, for 2014-2015, 2015-2016 , and
 Magna-Sirgas as the coordinate system for map comparison, given that
 this is the official reference coordinate system for Colombia.
 
-## Global Forest Cover Change (GFC)
+## Global Forest Cover Change Data(GFC) GLAD-UMD
 
 The High-Resolution Global Maps of 21st-Century Forest Cover Change
 (GFC- Table 1) is produced by the Group on Land Analysis and Discovery
@@ -99,64 +110,19 @@ cover threshold (Hansen et al 2013).
 This table provides a comparison between the GLAD and SMBYC datasets
 used for land cover analysis.
 
-<table>
-<colgroup>
-<col style="width: 23%" />
-<col style="width: 39%" />
-<col style="width: 36%" />
-</colgroup>
-<thead>
-<tr class="header">
-<th>Criteria</th>
-<th>SMBYC</th>
-<th>GLAD</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>Spatial Resolution</td>
-<td>30m</td>
-<td>30m</td>
-</tr>
-<tr class="even">
-<td>Base Information</td>
-<td>Landsat</td>
-<td>Landsat</td>
-</tr>
-<tr class="odd">
-<td>Coverage</td>
-<td>National</td>
-<td>Global</td>
-</tr>
-<tr class="even">
-<td>Frequency</td>
-<td>Irregular</td>
-<td>Annual</td>
-</tr>
-<tr class="odd">
-<td>Years</td>
-<td>1990, 2000, 2005, 2010, 2012, 2013, 2014, 2015, 2016, 2017, 2018,
-2019</td>
-<td>2000-2020</td>
-</tr>
-<tr class="even">
-<td>Strengths</td>
-<td>- Distinguishes between planted and natural forests<br>- Official
-information used to measure and report forest cover in Colombia</td>
-<td>- Higher temporal resolution<br>- Less data loss<br>- Annual
-updates<br>- Multiple canopy cover thresholds available</td>
-</tr>
-<tr class="odd">
-<td>Weaknesses</td>
-<td>- Maps produced at irregular intervals<br>- Multiple sources of data
-loss (SLC-off and cloudiness)</td>
-<td>- Does not distinguish between planted and natural forests<br>- Does
-not report forest gain</td>
-</tr>
-</tbody>
-</table>
+| Criteria           | IDEAM                                                                                                                              | GLAD                                                                                                                  |
+|--------------------|------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------|
+| Spatial Resolution | 30m                                                                                                                                | 30m                                                                                                                   |
+| Base Information   | Landsat                                                                                                                            | Landsat                                                                                                               |
+| Coverage           | National                                                                                                                           | Global                                                                                                                |
+| Frequency          | Irregular                                                                                                                          | Annual                                                                                                                |
+| Years              | 1990, 2000, 2005, 2010, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019                                                             | 2000-2020                                                                                                             |
+| Strengths          | \- Distinguishes between planted and natural forests<br>- Official information used to measure and report forest cover in Colombia | \- Higher temporal resolution<br>- Less data loss<br>- Annual updates<br>- Multiple canopy cover thresholds available |
+| Weaknesses         | \- Maps produced at irregular intervals<br>- Multiple sources of data loss (SLC-off and cloudiness)                                | \- Does not distinguish between planted and natural forests<br>- Does not report forest gain                          |
 
 # Methods
+
+## 1. Extraction of Oprimal Canopy Thresholds
 
 <figure>
 <img src="images/workflow.png" alt="Armonization Workflow" />
@@ -167,12 +133,11 @@ Harmonization consisted of the production of forest cover maps from GFC
 that best match the representation of forest cover and change by IDEAM
 (Fig. 1) and that we refer here as HGFC. The first step was to exclude
 from the class forest in GFC, pixels representing canopy forming
-cultivations such as tree plantations, oil palm cultivations and
-agroforestry systems that are explicitly excluded from the definition of
-forest used for IDEAM. We eliminated those pixels based on areas
-representing canopy forming cultivation in the national land cover maps
-for 2012 and 2018 (IDEAM, 2010 - Table 1), which are the closest dates
-to the period of analysis.
+cultivation such as oil palm cultivation and agroforestry systems that
+are explicitly excluded from the definition of forest used for IDEAM. We
+eliminated those pixels based on areas representing canopy forming
+cultivation in the national land cover maps for 2012 and 2017 (IDEAM,
+2010 - Table 1), which are the closest dates to the period of analysis.
 
 The second step was to produce a map representing three categories:
 forest persistence, non forest persistence and forest loss between 2010
@@ -213,12 +178,17 @@ subnational units.
 ![Agreement Metrics; overall and class
 level](images/harmonization1.jpeg)
 
-<figure>
-<img src="images/fig5_paper.jpg"
-alt="Optimal Canopy Threshold, Agreement level and Harmonized change map" />
-<figcaption aria-hidden="true">Optimal Canopy Threshold, Agreement level
-and Harmonized change map</figcaption>
-</figure>
+![Optimal Canopy Threshold, Agreement level and Harmonized change
+map](images/fig5_paper.jpg) \## 2. Obtention of yearly harmonized forest
+cover maps
+
+The optimized canopy cover threshold for each biome are then used to
+obtain yearly forest cover maps individually, using the the echanges
+function again. The procedure has been optimized to run iteratively over
+the all the individual spatial units. Memory load issues require to
+divide the download process into smaller subsets and temporarily store
+the outputs. Next step include reprojecting and aligning the outputs to
+a common src and assembling the final yearly maps.
 
 <figure>
 <img src="images/image.png"
@@ -227,3 +197,37 @@ alt="Area weighted agreement assessment between change maps derived from IDEAM a
 between change maps derived from IDEAM and Harmonized GFC maps for the
 categories non-forest, forest, and forest loss.</figcaption>
 </figure>
+
+## Funding
+
+This work was supported by [The National Aeronautics and Space
+Administration - NASA](https://cce.nasa.gov/cce/about.htm?), [Award
+80NSSC18K0339](https://cce.nasa.gov/cgi-bin/cce/cce_awards.pl?projType=project&progID=1&projID=3863).
+
+### Publications:
+
+Lara, W., Londoño, M.C., Gonzalez, I. and Gutierrez‐Velez, V.H., 2022.
+ecochange: An R‐package to derive ecosystem change indicators from
+freely available earth observation products. Methods in Ecology and
+Evolution, 13(11), pp.2379-2388.
+
+**Gutierrez-Velez VH**, Rodriguez-Escobar J, Mejía A†, Espejo J, Anaya
+JA, Blair, ME. Under review. Mapping forest cover and change as
+continuous variables is essential to advance consistency across forest
+monitoring products.
+
+### References
+
+Hansen, M. C., Potapov, P. V., Moore, R., Hancher, M., Turubanova, S.
+A., Tyukavina, A., Thau, D., Stehman, S. V., Goetz, S. J., Loveland, T.
+R., Kommareddy, A., Egorov, A., Chini, L., Justice, C. O., & Townshend,
+J. R. G. (2013). High-Resolution Global Maps of 21st-Century Forest
+Cover Change. Science, 342(6160), 850–853.
+<https://doi.org/10.1126/science.1244693>
+
+Galindo, G., Espejo, O. J., Ramírez, J. P., Forero, C., Valbuena, C. A.,
+Rubiano, J. C., Lozano, R. H., Vargas, K. M., Palacios, A., Palacios,
+S., Franco, C. A., Granados, E. I., Vergara, L. K., & Cabrera, E.
+(2014). Memoria Técnica. Cuantificación de la Superficie de Bosque
+Natural y Deforestación a Nivel Nacional Actualización Periodo 2012 –
+2013 \[Technical Report\]. IDEAM.

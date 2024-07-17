@@ -1,3 +1,6 @@
+---
+output: github_document
+---
 # Homologation of Global and National Forest Cover Products
 
 **A goal of large-area land cover mapping is to produce globally consistent characterizations that have local relevance and utility; that is, reliable information across scales.** (Hansen et al 2013)
