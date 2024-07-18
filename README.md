@@ -1,5 +1,5 @@
 
-# Homologation of Global and National Forest Cover Products
+# Harmonization of Global and National Forest Cover Products
 
 **A goal of large-area land cover mapping is to produce globally
 consistent characterizations that have local relevance and utility; that
