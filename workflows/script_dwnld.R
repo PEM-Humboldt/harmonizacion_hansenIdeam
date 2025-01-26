@@ -1,7 +1,7 @@
- 
-# Hansen forest  Map Downloader Using the echanges() function from the ecochange R package (Lara et al., 2024) 
+
+# Hansen forest  Map Downloader Using the echanges() function from the ecochange R package (Lara et al., 2024)
 # for individual polygons using a canopy threshold provided as attribute
-                                        #Load Packages 
+                                        #Load Packages
 packs <- c('terra', 'raster','purrr', 'landscapemetrics', 'sf','dplyr',
            'rlang', 'rasterDT', 'ecochange', 'here', 'gdalUtilities', 'jsonlite')
 
@@ -24,7 +24,7 @@ biomat <- masked%>%split(.$biome)
 # Function to split a list into n equal parts (deals with memory limitations distributing the work load into smaller sets)
 split_list <- function(input_list, n) {
   # Calculate the number of elements in each sublist
-  split_size <- ceiling(length(input_list) / n)  
+  split_size <- ceiling(length(input_list) / n)
   # Split the list into sublists
   split(input_list, rep(1:n, each = split_size, length.out = length(input_list)))
 }
@@ -34,7 +34,7 @@ biomat <- split_list(biomat, 15)
 # Check Number of polyons/subset
 sapply(biomat, length)
 
-                                        # Iterate over each subset (pending to fix) 
+                                        # Iterate over each subset (pending to fix)
 n <- 8
 biomat_r <- biomat[[n]]
 
@@ -42,10 +42,9 @@ system.time(#def <- lapply(biomat, function(ls){
 def1 <- lapply(biomat_r,function(sf){
     d <- echanges(sf,
                 lyrs = c('treecover2000','lossyear'), # a~no inicial y a~no de perdida
-                # path = '/media/mnt/harmonizacion_hansenIdeam/downloads', #directorio para domde se almacenan los datos descargados. si se deja getwd() se guardan en el directorio de trabajo
-                path = '/storage/home/TU/tug76452/harmonizacion_hansenIdeam/downloads',
+                path = here('downloads'),
                 eco_range = c(sf$threshold,100), # asigna el umbral de dosel. el valor se lee de l tabla de atributos de cada pol'igono
-                change_vals = seq(22,23,1), # los anos de descarga (a partir de 2000. en este caso 2022 y 2023 con pasos de un ano)
+                change_vals = seq(01,02,1), # los anos de descarga (a partir de 2000. en este caso 2022 y 2023 con pasos de un ano)
                 binary_output = FALSE, # si es TRUE, produce mascaras binarias de bosque /no bosque, de lo contrario, deja el valor del umbarl para cada pixel
                 mc.cores = 2) # numero de nucleos para correr en paralelo. Solo aplica para sistemas Linux/MacOS
   })
@@ -84,10 +83,10 @@ newdir <- here('reproj')
 ref <- here("reference", "mask_colombia.tif")
 ## set path to downloaded  files
 infiles <- file.path(out_dir, list.files(out_dir, pattern = ".tif"))
-## set paths for output files  
+## set paths for output files
 outfiles <- file.path(newdir, basename(infiles))
 
-#create temp dir. 
+#create temp dir.
 temp_dir <- here('tmp')
 
 # Ensure the directory exists
@@ -97,6 +96,8 @@ if (!dir.exists(temp_dir)) {
 
 # Get the CRS of the reference raster
 reference_info <- gdalUtilities::gdalinfo(ref, json = TRUE)
+# Replace invalid 'nan' with 'null' in the JSON string
+reference_info <- gsub("\\bnan\\b", "null", reference_info)
 reference_info <- fromJSON(reference_info)
 reference_crs <- reference_info$coordinateSystem$wkt
 # Extract pixel size from reference raster
@@ -113,7 +114,7 @@ process_raster <- function(input_file, output_file, reference_crs, reference_pix
                                 co = c("COMPRESS=LZW", "TILED=YES", "PIXELTYPE=SIGNEDBYTE"))
   temp_aligned_file <- tempfile(tmpdir = temp_dir, fileext = ".tif")
   # Reproject and align
-  gdalUtilities::gdalwarp(srcfile = temp_file, dstfile = temp_aligned_file, t_srs = reference_crs, 
+  gdalUtilities::gdalwarp(srcfile = temp_file, dstfile = temp_aligned_file, t_srs = reference_crs,
                           tr = reference_pixel_size, r = "near", tap = TRUE, overwrite = TRUE)
   # Trim the raster
   r <- rast(temp_aligned_file)
