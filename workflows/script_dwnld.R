@@ -44,7 +44,7 @@ def1 <- lapply(biomat_r,function(sf){
                 lyrs = c('treecover2000','lossyear'), # a~no inicial y a~no de perdida
                 path = here('downloads'),
                 eco_range = c(sf$threshold,100), # asigna el umbral de dosel. el valor se lee de l tabla de atributos de cada pol'igono
-                change_vals = seq(01,02,1), # los anos de descarga (a partir de 2000. en este caso 2022 y 2023 con pasos de un ano)
+                change_vals = seq(00,02,1), # los anos de descarga (a partir de 2000. en este caso 2022 y 2023 con pasos de un ano)
                 binary_output = FALSE, # si es TRUE, produce mascaras binarias de bosque /no bosque, de lo contrario, deja el valor del umbarl para cada pixel
                 mc.cores = 2) # numero de nucleos para correr en paralelo. Solo aplica para sistemas Linux/MacOS
   })

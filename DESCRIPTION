@@ -1,0 +1,33 @@
+Package: ForArmR
+Title: Harmonized Forest Cover Map Production for Colombia
+Version: 0.0.0.9000
+Authors@R: 
+    c(person(given="Jerónimo", family= "Rodriguez-Escobar",
+            email="jeronimo.rescobar@gmail.com", 
+            role = c("aut", "cre"),
+            comment = c(ORCID = "0000-0001-6711-9776")),
+    person(given ="Victor Hugo", family="Gutierrez-Velez", 
+            email = "victorhugo@temple.edu", 
+            role = "ctb",
+            comment = c(ORCID = "0000-0003-1338-2020")))
+Description: Set of tools to extract agreement metrics between different forest cover datasets, extract highest agreement levels and systematically download and assemble yearly harmonized forest cover maps for the coutry of Colombia.
+License: LGPL (>= 3)
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.1
+Imports:
+    dplyr,
+    ecochange,
+    gdalUtilities,
+    ggplot2,
+    here,
+    jsonlite,
+    landscapemetrics,
+    purrr,
+    raster,
+    sf,
+    terra,
+    tidyr
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3

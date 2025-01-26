@@ -11,6 +11,7 @@ vector_data/
 outs/
 downloads/
 Documentation/.DS_Store
+images/.DS_Store
 .DS_Store
 reference/
 tmp/
