@@ -1,7 +1,7 @@
 library(purrr)
 library(tidyr)
 
-load(here('outputs', 'areas_fin.RData'))
+load(here('results_outputs', 'areas_fin.RData'))
 
 areas_f
 
